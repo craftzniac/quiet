@@ -1,4 +1,4 @@
-import { twelveStringGuitar1 as sound } from "./wave-tables/twelve_string_guitar1"
+import { bass as sound } from "./wave-tables/bass.ts"
 import { isAudioNote, toDurationInBeats } from "./core/utils"
 import type { TAudioNote, TSolfegeNote, TSolfegeRest } from "./core/types"
 import { solfegeToAudioNotes } from "./core/solfegeToAudio"
@@ -22,18 +22,24 @@ export default function App() {
     const waveForm = audioCtx.createPeriodicWave(sound.real, sound.imag)
 
     const solfegeNotes: (TSolfegeNote | TSolfegeRest)[] = [
+      { type: "note", solfege: "m", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "m", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "f", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "s", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "s", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "f", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "m", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "r", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "d", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
       { type: "note", solfege: "d", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
       { type: "note", solfege: "r", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
       { type: "note", solfege: "m", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "rest", durationInBeats: toDurationInBeats(2) },
-      { type: "note", solfege: "f", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "s", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "l", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "t", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "d", relativeOctave: relativeOctave.up_1, durationInBeats: toDurationInBeats(1) },
+      { type: "note", solfege: "m", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(1.5) },
+      { type: "note", solfege: "r", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(2) },
+      { type: "note", solfege: "d", relativeOctave: relativeOctave.zero, durationInBeats: toDurationInBeats(2) },
     ]
 
-    const notes = solfegeToAudioNotes({ mode: "major", tonic: "F" }, tempo.Allegro, solfegeNotes)
+    const notes = solfegeToAudioNotes({ mode: "major", tonic: "C" }, tempo.Andante, solfegeNotes)
 
     let cursor = audioCtx.currentTime
     for (const noteOrRest of notes) {
