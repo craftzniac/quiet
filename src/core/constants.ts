@@ -1,0 +1,131 @@
+
+export type TVoiceOctave = 4 & { __brand__: "VoiceOctave" }
+
+export const voiceOctave = toVoiceOctave(4)    // WARN: 4 means C4 i.e middle C.  YOU may GO OUT OF RANGE OF THE PIANOKEYFREQUENCIES LIST IF you change absoluteOctave. For now there is only one voice
+
+function toVoiceOctave(val: 4): TVoiceOctave {
+  if (val !== 4) {
+    throw new Error("voice octave can only be the value 4")
+  }
+  return val as TVoiceOctave
+}
+
+
+export const relativeOctaves = [-2, -1, 0, 1, 2] as const
+
+export type TRelativeOctave = typeof relativeOctaves[number] & { __brand__: "RelativeOctave" }
+
+export const relativeOctave: {  // explicit typing so that a user of this object does not need to cast props to TRelativeOctave
+  down_2: TRelativeOctave,
+  down_1: TRelativeOctave,
+  zero: TRelativeOctave,
+  up_1: TRelativeOctave,
+  up_2: TRelativeOctave,
+} = {
+  down_2: relativeOctaves[0] as TRelativeOctave,
+  down_1: relativeOctaves[1] as TRelativeOctave,
+  zero: relativeOctaves[2] as TRelativeOctave,
+  up_1: relativeOctaves[3] as TRelativeOctave,
+  up_2: relativeOctaves[4] as TRelativeOctave,
+} as const
+
+
+
+// export const baseSolfegeNotes: TSolfegeNoteName[] = ["d", "r", "m", "f", "s", "l", "t"] as const
+export const baseSolfegeNotes = ["d", "r", "m", "f", "s", "l", "t"] as const
+
+export type TSolfegeNoteName = typeof baseSolfegeNotes[number]
+
+// export type TSolfegeNoteName = "d" | "r" | "m" | "f" | "s" | "l" | "t"
+//
+export const baseSolfegeNote = {
+  Doh: baseSolfegeNotes[0] as TSolfegeNoteName,   // explicit casting because branded type
+  Ray: baseSolfegeNotes[1] as TSolfegeNoteName,
+  Mee: baseSolfegeNotes[2] as TSolfegeNoteName,
+  Fah: baseSolfegeNotes[3] as TSolfegeNoteName,
+  Soh: baseSolfegeNotes[4] as TSolfegeNoteName,
+  Lah: baseSolfegeNotes[5] as TSolfegeNoteName,
+  Tee: baseSolfegeNotes[6] as TSolfegeNoteName,
+} as const
+
+
+
+
+export const baseLetterNotes = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const
+
+export const pianoNoteFrequency = {
+  Bb1: 58.27,
+  B1: 61.74,
+  C2: 65.41,         // Deep C
+  "C#2": 69.30,
+  D2: 73.42,
+  Eb2: 77.78,
+  E2: 82.41,
+  F2: 87.31,
+  "F#2": 92.50,
+  G2: 98.00,
+  Ab2: 103.83,
+  A2: 110.00,
+  Bb2: 116.54,
+  B2: 123.47,
+  C3: 130.81,
+  "C#3": 138.59,
+  D3: 146.83,
+  Eb3: 155.56,
+  E3: 164.81,
+  F3: 174.61,
+  "F#3": 185.00,
+  G3: 196.00,
+  Ab3: 207.65,
+  A3: 220.00,
+  Bb3: 233.08,
+  B3: 246.94,
+  C4: 261.63,       // Middle C
+  "C#4": 277.18,
+  D4: 293.66,
+  Eb4: 311.13,
+  E4: 329.63,
+  F4: 349.23,
+  "F#4": 369.99,
+  G4: 392.00,
+  Ab4: 415.30,
+  A4: 440.00,
+  Bb4: 466.16,
+  B4: 493.88,
+  C5: 523.25,      // Tenor C
+  "C#5": 554.37,
+  D5: 587.33,
+  Eb5: 622.25,
+  E5: 659.26,
+  F5: 698.46,
+  "F#5": 739.99,
+  G5: 783.99,
+  Ab5: 830.61,
+  A5: 880.00,
+  Bb5: 932.33,
+  B5: 987.77,
+  C6: 1046.50,     // Soprano C ~ High C
+  "C#6": 1108.73,
+  D6: 1174.66,
+  Eb6: 1244.51,
+  E6: 1318.51,
+  F6: 1396.91,
+  "F#6": 1479.98,
+  G6: 1567.98,
+  Ab6: 1661.22,
+  A6: 1760.00,
+  Bb6: 1864.66,
+  B6: 1975.53,
+  C7: 2093.01,     // Double High C
+} as const
+
+
+export const tempo = {
+  Grave: 40,
+  Largo: 50,
+  Adagio: 70,
+  Andante: 90,
+  Moderato: 110,
+  Allegro: 140,
+  Presto: 180
+} as const
