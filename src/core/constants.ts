@@ -1,3 +1,7 @@
+export const baseScaleGenMove = {  // WARN: Must contain only non-zero positive integers
+  ONE: 1,
+  TWO: 2,
+} as const
 
 export type TVoiceOctave = 4 & { __brand__: "VoiceOctave" }
 
@@ -11,25 +15,29 @@ function toVoiceOctave(val: 4): TVoiceOctave {
 }
 
 
-export const relativeOctaves = [-2, -1, 0, 1, 2] as const
+export const solfegeNoteRelativeOctaves = [-2, -1, 0, 1, 2] as const
 
-export type TRelativeOctave = typeof relativeOctaves[number] & { __brand__: "RelativeOctave" }
+export type TSolfegeNoteRelativeOctave = typeof solfegeNoteRelativeOctaves[number] & { __brand__: "RelativeOctave" }
 
-export const relativeOctave: {  // explicit typing so that a user of this object does not need to cast props to TRelativeOctave
-  down_2: TRelativeOctave,
-  down_1: TRelativeOctave,
-  zero: TRelativeOctave,
-  up_1: TRelativeOctave,
-  up_2: TRelativeOctave,
+export const solfegeNoteRelativeOctave: {  // explicit typing so that a user of this object does not need to cast props to TSolfegeNoteRelativeOctave
+  down_2: TSolfegeNoteRelativeOctave,
+  down_1: TSolfegeNoteRelativeOctave,
+  zero: TSolfegeNoteRelativeOctave,
+  up_1: TSolfegeNoteRelativeOctave,
+  up_2: TSolfegeNoteRelativeOctave,
 } = {
-  down_2: relativeOctaves[0] as TRelativeOctave,
-  down_1: relativeOctaves[1] as TRelativeOctave,
-  zero: relativeOctaves[2] as TRelativeOctave,
-  up_1: relativeOctaves[3] as TRelativeOctave,
-  up_2: relativeOctaves[4] as TRelativeOctave,
+  down_2: solfegeNoteRelativeOctaves[0] as TSolfegeNoteRelativeOctave,
+  down_1: solfegeNoteRelativeOctaves[1] as TSolfegeNoteRelativeOctave,
+  zero: solfegeNoteRelativeOctaves[2] as TSolfegeNoteRelativeOctave,
+  up_1: solfegeNoteRelativeOctaves[3] as TSolfegeNoteRelativeOctave,
+  up_2: solfegeNoteRelativeOctaves[4] as TSolfegeNoteRelativeOctave,
 } as const
 
 
+export const letterNoteRelativeOctave = {
+  zero: 0,
+  one: 1,
+} as const
 
 // export const baseSolfegeNotes: TSolfegeNoteName[] = ["d", "r", "m", "f", "s", "l", "t"] as const
 export const baseSolfegeNotes = ["d", "r", "m", "f", "s", "l", "t"] as const
@@ -117,6 +125,18 @@ export const pianoNoteFrequency = {
   Bb6: 1864.66,
   B6: 1975.53,
   C7: 2093.01,     // Double High C
+  "C#7": 2217.46,
+  D7: 2349.32,
+  Eb7: 2489.02,
+  E7: 2637.02,
+  F7: 2793.83,
+  "F#7": 2959.96,
+  G7: 3135.96,
+  Ab7: 3322.44,
+  A7: 3520.00,
+  Bb7: 3729.31,
+  B7: 3951.01,
+  C8: 4186.01,     // Eighth octave
 } as const
 
 

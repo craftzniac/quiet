@@ -1,7 +1,15 @@
-import { type pianoNoteFrequency, type baseLetterNotes, tempo, type TRelativeOctave, type TSolfegeNoteName } from "./constants";
+import { type pianoNoteFrequency, type baseLetterNotes, tempo, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, letterNoteRelativeOctave, baseScaleGenMove } from "./constants";
 
-export type TResult<T, E extends Error = Error> = { ok: true, value: T } | { ok: false, error: E }
+export type TBaseLetterNotePosition = {
+  baseLetterNoteName: TBaseLetterNoteName,
+  baseLetterNoteRelOctave: TLetterNoteRelativeOctave,
+  baseLetterNoteIndex: TBaseLetterNoteIndex 
+}
 
+export type TBaseScaleGenMove = typeof baseScaleGenMove[keyof typeof baseScaleGenMove]
+
+// export type TResult<T, E extends Error = Error> = { ok: true, value: T } | { ok: false, error: E }
+//
 export type TScoreKeySignature = {
   tonic: TBaseLetterNoteName,
   mode: "major" // "major" | "minor"; for now just assume mode is always major
@@ -12,7 +20,7 @@ export type TScoreTimeSignature = {
 }
 
 export type TBaseLetterNoteName = typeof baseLetterNotes[number]
-export type TBaseLetterNotePosition = number & { __brand__: "BaseLetterNotePosition" }
+export type TBaseLetterNoteIndex = number & { __brand__: "BaseLetterNotePosition" }
 
 export type TRest = { duration: number }
 
@@ -37,9 +45,13 @@ export type TDurationInBeats = number & { __brand__: "DurationInBeats" }
 export type TSolfegeNote = {
   type: "note",
   solfege: TSolfegeNoteName,
-  relativeOctave: TRelativeOctave,
+  relativeOctave: TSolfegeNoteRelativeOctave,
   durationInBeats: TDurationInBeats
 }
+
+export type TLetterNoteRelativeOctave = typeof letterNoteRelativeOctave[
+  keyof typeof letterNoteRelativeOctave
+]
 
 export type TSolfegeRest = {
   type: "rest",

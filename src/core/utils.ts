@@ -1,17 +1,17 @@
-import { pianoNoteFrequency, type TRelativeOctave, type TSolfegeNoteName, type TVoiceOctave } from "./constants";
-import type { TAudioNote, TAudioRest, TBaseLetterNoteName, TDurationInBeats, TLetterNoteFrequency, TLetterNoteName, TScoreTempoInBPM } from "./types";
+import { pianoNoteFrequency, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, type TVoiceOctave, letterNoteRelativeOctave, baseLetterNotes } from "./constants";
+import type { TAudioNote, TAudioRest, TBaseLetterNoteIndex, TBaseLetterNotePosition, TDurationInBeats, TLetterNoteFrequency, TLetterNoteName, TLetterNoteRelativeOctave, TScoreTempoInBPM } from "./types";
 
-export function createSolfegeToLetterNoteNameMap(baseScale: Map<TSolfegeNoteName, TBaseLetterNoteName>, voiceOctave: TVoiceOctave, relativeOctave: TRelativeOctave): Map<TSolfegeNoteName, TLetterNoteName> {
+export function createSolfegeToLetterNoteNameMap(baseScale: Map<TSolfegeNoteName, TBaseLetterNotePosition>, voiceOctave: TVoiceOctave, solfegeNoteRelativeOctave: TSolfegeNoteRelativeOctave): Map<TSolfegeNoteName, TLetterNoteName> {
   const map: Map<TSolfegeNoteName, TLetterNoteName> = new Map()
 
   for (const key of baseScale.keys()) {
-    const baseLetterNoteName = baseScale.get(key)
-    if (!baseLetterNoteName) {
-      throw new Error("baseScale has an invalid key")
+    const baseLetterNotePosition = baseScale.get(key)
+    if (!baseLetterNotePosition) {
+      throw new Error("baseScale has an invalid key")  // realistically should never be invoked because baseScale is indexed using key which is definitely a key in baseScale.keys()
     }
-
-    const noteName = baseLetterNoteName + (voiceOctave + relativeOctave)
+    const noteName = baseLetterNotePosition.baseLetterNoteName + (voiceOctave as number + solfegeNoteRelativeOctave as number + baseLetterNotePosition.baseLetterNoteRelOctave)
     if (!isLetterNoteName(noteName)) {
+      console.log("notename:", noteName)
       throw new Error("could not build a valid TLetterNoteName")
     }
     map.set(key, noteName)
@@ -48,9 +48,9 @@ export function toDurationInBeats(val: number): TDurationInBeats {  // supports 
   throw new Error("val does not represent a valid TDurationInBeats")
 }
 
-export function toRelativeOctave(val: number): TRelativeOctave {
-  if (val >= -2 && val <= 2 && Number.isInteger(val) == true) return val as TRelativeOctave
-  throw new Error("val does not represent a valid TRelativeOctave")
+export function toRelativeOctave(val: number): TSolfegeNoteRelativeOctave {
+  if (val >= -2 && val <= 2 && Number.isInteger(val) == true) return val as TSolfegeNoteRelativeOctave
+  throw new Error("val does not represent a valid TSolfegeNoteRelativeOctave")
 }
 
 
@@ -58,3 +58,17 @@ export function durationInBeatsToDurationInSecs(durationInBeats: TDurationInBeat
   return (durationInBeats * 60) / scoreTempo
 }
 
+
+export function toLetterNoteRelativeOctave(val: number): TLetterNoteRelativeOctave {
+  if (val == letterNoteRelativeOctave.one || val == letterNoteRelativeOctave.zero) {
+    return val as TLetterNoteRelativeOctave
+  }
+  throw new Error("couldn't convert val to a valid TLetterNoteRelativeOctave")
+}
+
+export function toBaseLetterNoteIndex(val: number): TBaseLetterNoteIndex {
+  if (Number.isInteger(val) && val < baseLetterNotes.length) {
+    return val as TBaseLetterNoteIndex
+  }
+  throw new Error("couldn't convert val to a valid TBaseLetterNotePosition")
+}

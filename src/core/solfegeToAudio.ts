@@ -1,6 +1,6 @@
-import { baseLetterNotes, baseSolfegeNote, baseSolfegeNotes, relativeOctave, voiceOctave, type TRelativeOctave, type TSolfegeNoteName } from "./constants"
-import type { TAudioNote, TAudioRest, TBaseLetterNoteName, TBaseLetterNotePosition, TLetterNoteName, TScoreKeySignature, TScoreTempoInBPM, TSolfegeNote, TSolfegeRest } from "./types"
-import { createSolfegeToLetterNoteNameMap, durationInBeatsToDurationInSecs, getLetterNoteFrequency } from "./utils"
+import { baseLetterNotes, baseSolfegeNote, baseSolfegeNotes, voiceOctave, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, solfegeNoteRelativeOctave, baseScaleGenMove, letterNoteRelativeOctave } from "./constants"
+import type { TAudioNote, TAudioRest, TBaseLetterNoteName, TBaseLetterNoteIndex, TBaseScaleGenMove, TLetterNoteName, TScoreKeySignature, TScoreTempoInBPM, TSolfegeNote, TSolfegeRest, TBaseLetterNotePosition } from "./types"
+import { createSolfegeToLetterNoteNameMap, durationInBeatsToDurationInSecs, getLetterNoteFrequency, toBaseLetterNoteIndex, toLetterNoteRelativeOctave } from "./utils"
 
 // @ts-expect-error this variable is currently not being used
 // eslint-disable-next-line
@@ -49,6 +49,7 @@ export function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo
       if (!solfegeToLetterNoteNameMapForRelativeOctave) {
         throw new Error("solfegeToLetterNoteNameMap was not properly created")
       }
+      console.log("solfegeToLetterNoteNameMapForRelativeOctave: ", solfegeToLetterNoteNameMapForRelativeOctave)
       const letterNoteName = solfegeToLetterNoteNameMapForRelativeOctave.get(solfegeNote.solfege)
       if (!letterNoteName) {
         throw new Error("invalid solfegeToLetterNoteName mapping for this relative octave")
@@ -73,32 +74,65 @@ export function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo
   return audioNotes
 }
 
-function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> {
-  const baseScale: Map<TSolfegeNoteName, TBaseLetterNoteName> = new Map()
-  baseScale.set(baseSolfegeNote.Doh, scoreKey)
+
+function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePosition, forwardMove: TBaseScaleGenMove, baseLetterNoteNames: typeof baseLetterNotes): TBaseLetterNotePosition {
+  const { baseLetterNoteIndex: currLetterNoteIndex, baseLetterNoteRelOctave: currLeterNoteRelOctave } = currLetterNote
+  const modulo = baseLetterNoteNames.length
+  const relOctave = Math.floor((currLetterNoteIndex + forwardMove + (currLeterNoteRelOctave * modulo)) / modulo)
+  console.log("relOctave:", relOctave)
+  const noteIndex = (currLetterNoteIndex + forwardMove) % modulo
+  const noteName = baseLetterNoteNames[noteIndex]
+  if (!noteName) {
+    throw new Error("calculation for letter note index was wrong")
+  }
+  return { baseLetterNoteIndex: toBaseLetterNoteIndex(noteIndex), baseLetterNoteName: noteName, baseLetterNoteRelOctave: toLetterNoteRelativeOctave(relOctave) }
+}
+
+
+/**
+ * @returns {TBaseLetterNoteIndex} the index of a base letter note from the base letter note array
+ * */
+function getNoteIndexInBaseLetterNotes(note: TBaseLetterNoteName, bLetterNotes: typeof baseLetterNotes): TBaseLetterNoteIndex | null {
+  for (let i = 0; i < bLetterNotes.length; i++) {
+    const n = baseLetterNotes[i]
+    if (n === note) {
+      return toBaseLetterNoteIndex(i)
+    }
+  }
+  return null
+}
+
+function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfegeNoteRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> {
+  const baseScale: Map<TSolfegeNoteName, TBaseLetterNotePosition> = new Map()
+
+  const scoreKeyIndexInBaseScale = getNoteIndexInBaseLetterNotes(scoreKey, baseLetterNotes)
+  if (scoreKeyIndexInBaseScale == null) {
+    throw new Error("scoreKey is an invalid base letter note")
+  }
+  const dohNotePosition: TBaseLetterNotePosition = {
+    baseLetterNoteIndex: scoreKeyIndexInBaseScale,
+    baseLetterNoteName: scoreKey,
+    baseLetterNoteRelOctave: letterNoteRelativeOctave.zero
+  }
+  baseScale.set(baseSolfegeNote.Doh, dohNotePosition)
 
   // use W-W-H-W-W-W-H
-  const pattern = [2, 2, 1, 2, 2, 2]   // generate base scale, currently assumed to be a major scale. // WARN: Must contain only positive integers
+  const pattern = [baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.ONE, baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.TWO] as const   // generate base scale using pattern [2,2,1,2,2,2] -- major scale
 
-  const startIndex = getNotePositionInBaseLetterNotes(scoreKey)
-  if (startIndex === null) {
-    throw new Error("scoreKey passed is weird and invalid")
-  }
-  let cursor: TBaseLetterNotePosition = startIndex
+  let noteInScale = dohNotePosition
 
   const solfegeNotes = baseSolfegeNotes
 
   for (let i = 0; i < pattern.length; i++) {
     const move = pattern[i];
-    cursor = ((cursor + move) % baseLetterNotes.length) as TBaseLetterNotePosition
-    const solfegeIndex = i + 1
-    if (solfegeIndex >= solfegeNotes.length) {
-      throw new Error("pattern array should not have more than 6 elements")
-    }
-    baseScale.set(solfegeNotes[i + 1], baseLetterNotes[cursor])
+    noteInScale = getNextLetterNotePositionInScale(noteInScale, move, baseLetterNotes)
+    // doing [i+1] instead of [i]  because the first note in solfegeNotes - Doh note, is already set in the map
+    baseScale.set(solfegeNotes[i + 1], noteInScale)
   }
 
-  const scale: Map<TRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> = new Map()
+  console.log("baseScale:", baseScale)
+
+  const scale: Map<TSolfegeNoteRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> = new Map()
   /*
    * Sample resulting scale:
    * Map {
@@ -154,33 +188,25 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TRelat
    * }
    * */
   scale.set(
-    relativeOctave.down_2,
-    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, relativeOctave.down_2)
+    solfegeNoteRelativeOctave.down_2,
+    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, solfegeNoteRelativeOctave.down_2)
   )
   scale.set(
-    relativeOctave.down_1,
-    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, relativeOctave.down_1)
+    solfegeNoteRelativeOctave.down_1,
+    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, solfegeNoteRelativeOctave.down_1)
   )
   scale.set(
-    relativeOctave.zero,
-    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, relativeOctave.zero)
+    solfegeNoteRelativeOctave.zero,
+    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, solfegeNoteRelativeOctave.zero)
   )
   scale.set(
-    relativeOctave.up_1,
-    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, relativeOctave.up_1)
+    solfegeNoteRelativeOctave.up_1,
+    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, solfegeNoteRelativeOctave.up_1)
   )
   scale.set(
-    relativeOctave.up_2,
-    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, relativeOctave.up_2)
+    solfegeNoteRelativeOctave.up_2,
+    createSolfegeToLetterNoteNameMap(baseScale, voiceOctave, solfegeNoteRelativeOctave.up_2)
   )
 
   return scale
-}
-
-function getNotePositionInBaseLetterNotes(note: TBaseLetterNoteName): TBaseLetterNotePosition | null {
-  for (let i = 0; i < baseLetterNotes.length; i++) {
-    const n = baseLetterNotes[i]
-    if (n === note) return i as TBaseLetterNotePosition
-  }
-  return null
 }
