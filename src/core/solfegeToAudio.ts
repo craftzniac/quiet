@@ -1,42 +1,20 @@
-import { baseLetterNotes, baseSolfegeNote, baseSolfegeNotes, voiceOctave, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, solfegeNoteRelativeOctave, baseScaleGenMove, letterNoteRelativeOctave } from "./constants"
-import type { TAudioNote, TAudioRest, TBaseLetterNoteName, TBaseLetterNoteIndex, TBaseScaleGenMove, TLetterNoteName, TScoreKeySignature, TScoreTempoInBPM, TSolfegeNote, TSolfegeRest, TBaseLetterNotePosition } from "./types"
-import { createSolfegeToLetterNoteNameMap, durationInBeatsToDurationInSecs, getLetterNoteFrequency, toBaseLetterNoteIndex, toLetterNoteRelativeOctave } from "./utils"
-
-// @ts-expect-error this variable is currently not being used
-// eslint-disable-next-line
-const solfege = `|m:m:m:-|m:m:m:-|m:s:d:r|m:-:-:-|f:f:f:-|f:m:m:-|m:r:r:m|r:-:s:-|`
-
-
-// read solfege and spit out a sequence of solfege notes and rests
-// loop through solfege notes and spit out letter notes with duration in seconds
-
-/*
- *    dv1 -> C3
- *    rv1 -> D3
- *    mv1 -> E3
- *    fv1 -> F3
- *    sv1 -> G3
- *    lv1 -> A3
- *    tv1 -> B3
- *    d -> C4
- *    r -> D4
- *    m -> E4
- *    f -> F4
- *    s -> G4
- *    l -> A4
- *    t -> B4
- *    d^1 -> C5
- *    r^1 -> D5
- *    m^1 -> E5
- *    f^1 -> F5
- *    s^1 -> G5
- *    l^1 -> A5
- *    t^1 -> B5
- *    d^2 -> C6
- *
- * */
-
-
+import {
+  baseLetterNotes, baseSolfegeNote,
+  baseSolfegeNotes, voiceOctave,
+  type TSolfegeNoteRelativeOctave, type TSolfegeNoteName,
+  solfegeNoteRelativeOctave, baseScaleGenMove,
+  letterNoteRelativeOctave, pianoNoteFrequency, type TVoiceOctave
+} from "./constants"
+import type {
+  TAudioNote, TAudioRest,
+  TBaseLetterNoteName, TBaseLetterNoteIndex,
+  TBaseScaleGenMove, TLetterNoteName,
+  TScoreKeySignature, TScoreTempoInBPM,
+  TSolfegeNote, TSolfegeRest,
+  TBaseLetterNotePosition, TScore,
+  TSoundWave, TLetterNoteRelativeOctave,
+  TDurationInBeats, TLetterNoteFrequency
+} from "./types"
 
 export function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScoreTempoInBPM, notes: (TSolfegeNote | TSolfegeRest)[]): (TAudioNote | TAudioRest)[] {
   const audioNotes: (TAudioNote | TAudioRest)[] = []
@@ -49,7 +27,6 @@ export function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo
       if (!solfegeToLetterNoteNameMapForRelativeOctave) {
         throw new Error("solfegeToLetterNoteNameMap was not properly created")
       }
-      console.log("solfegeToLetterNoteNameMapForRelativeOctave: ", solfegeToLetterNoteNameMapForRelativeOctave)
       const letterNoteName = solfegeToLetterNoteNameMapForRelativeOctave.get(solfegeNote.solfege)
       if (!letterNoteName) {
         throw new Error("invalid solfegeToLetterNoteName mapping for this relative octave")
@@ -79,7 +56,6 @@ function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePositio
   const { baseLetterNoteIndex: currLetterNoteIndex, baseLetterNoteRelOctave: currLeterNoteRelOctave } = currLetterNote
   const modulo = baseLetterNoteNames.length
   const relOctave = Math.floor((currLetterNoteIndex + forwardMove + (currLeterNoteRelOctave * modulo)) / modulo)
-  console.log("relOctave:", relOctave)
   const noteIndex = (currLetterNoteIndex + forwardMove) % modulo
   const noteName = baseLetterNoteNames[noteIndex]
   if (!noteName) {
@@ -129,8 +105,6 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
     // doing [i+1] instead of [i]  because the first note in solfegeNotes - Doh note, is already set in the map
     baseScale.set(solfegeNotes[i + 1], noteInScale)
   }
-
-  console.log("baseScale:", baseScale)
 
   const scale: Map<TSolfegeNoteRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> = new Map()
   /*
@@ -209,4 +183,88 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
   )
 
   return scale
+}
+
+
+export function scheduleAndPlay(soundWave: TSoundWave, score: TScore) {
+  const audioCtx = new AudioContext()
+  const waveForm = audioCtx.createPeriodicWave(soundWave.real, soundWave.imag)
+  const notes = solfegeToAudioNotes(score.metadata.keySignature, score.metadata.tempo, score.voices[0].measures)
+
+  let cursor = audioCtx.currentTime
+  for (const noteOrRest of notes) {
+    if (isAudioNote(noteOrRest)) {
+      playNote(audioCtx, waveForm, cursor, noteOrRest)
+      cursor += noteOrRest.durationInSec
+    } else {  // it's a rest
+      cursor += noteOrRest.durationInSec
+    }
+  }
+}
+
+function playNote(audioCtx: AudioContext, waveForm: PeriodicWave, cursor: number, note: TAudioNote) {
+  if (!audioCtx) { return }
+  const osc = audioCtx.createOscillator()
+  osc.frequency.value = note.frequency
+  osc.setPeriodicWave(waveForm)
+  osc.connect(audioCtx.destination)
+  osc.start(cursor)
+  osc.stop(cursor + note.durationInSec)
+}
+
+function toLetterNoteRelativeOctave(val: number): TLetterNoteRelativeOctave {
+  if (val == letterNoteRelativeOctave.one || val == letterNoteRelativeOctave.zero) {
+    return val as TLetterNoteRelativeOctave
+  }
+  throw new Error("couldn't convert val to a valid TLetterNoteRelativeOctave")
+}
+
+function toBaseLetterNoteIndex(val: number): TBaseLetterNoteIndex {
+  if (Number.isInteger(val) && val < baseLetterNotes.length) {
+    return val as TBaseLetterNoteIndex
+  }
+  throw new Error("couldn't convert val to a valid TBaseLetterNotePosition")
+}
+
+
+function durationInBeatsToDurationInSecs(durationInBeats: TDurationInBeats, scoreTempo: TScoreTempoInBPM): number {
+  return (durationInBeats * 60) / scoreTempo
+}
+
+function isAudioNote(val: TAudioNote | TAudioRest): val is TAudioNote {
+  return val.type == "note" && "durationInSec" in val && "frequency" in val && typeof val.frequency == "number"
+}
+
+
+function getLetterNoteFrequency<N extends string>(noteName: N): N extends TLetterNoteName ? TLetterNoteFrequency : TLetterNoteFrequency | null {
+  if (!isLetterNoteName(noteName)) {
+    // @ts-expect-error: to avoid enabling the explicit-any flag in ts config
+    return null
+  }
+  return pianoNoteFrequency[noteName]
+}
+
+function createSolfegeToLetterNoteNameMap(baseScale: Map<TSolfegeNoteName, TBaseLetterNotePosition>, voiceOctave: TVoiceOctave, solfegeNoteRelativeOctave: TSolfegeNoteRelativeOctave): Map<TSolfegeNoteName, TLetterNoteName> {
+  const map: Map<TSolfegeNoteName, TLetterNoteName> = new Map()
+  for (const key of baseScale.keys()) {
+    const baseLetterNotePosition = baseScale.get(key)
+    if (!baseLetterNotePosition) {
+      throw new Error("baseScale has an invalid key")  // realistically should never be invoked because baseScale is indexed using key which is definitely a key in baseScale.keys()
+    }
+    const noteName = baseLetterNotePosition.baseLetterNoteName + (voiceOctave as number + solfegeNoteRelativeOctave as number + baseLetterNotePosition.baseLetterNoteRelOctave)
+    if (!isLetterNoteName(noteName)) {
+      throw new Error("could not build a valid TLetterNoteName")
+    }
+    map.set(key, noteName)
+  }
+  return map
+}
+
+function isLetterNoteName(name: string): name is TLetterNoteName {
+  const mutableNoteFrequency: Record<string, number> = { ...pianoNoteFrequency }
+  const objKeys = Object.keys(mutableNoteFrequency);
+  for (const key of objKeys) {
+    if (key == name) return true
+  }
+  return false
 }

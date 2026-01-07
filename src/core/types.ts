@@ -1,15 +1,33 @@
 import { type pianoNoteFrequency, type baseLetterNotes, tempo, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, letterNoteRelativeOctave, baseScaleGenMove } from "./constants";
 
+export type TSoundWave = { real: number[], imag: number[] }
+
 export type TBaseLetterNotePosition = {
   baseLetterNoteName: TBaseLetterNoteName,
   baseLetterNoteRelOctave: TLetterNoteRelativeOctave,
-  baseLetterNoteIndex: TBaseLetterNoteIndex 
+  baseLetterNoteIndex: TBaseLetterNoteIndex
 }
 
 export type TBaseScaleGenMove = typeof baseScaleGenMove[keyof typeof baseScaleGenMove]
 
 // export type TResult<T, E extends Error = Error> = { ok: true, value: T } | { ok: false, error: E }
-//
+
+type TScoreMetadata = {
+  title: string,
+  keySignature: TScoreKeySignature,
+  timeSignature: TScoreTimeSignature,
+  composedBy: string,
+  arrangedBy: string,
+  tempo: TScoreTempoInBPM,
+}
+
+export type TScore = {
+  metadata: TScoreMetadata,
+  voices: TVoice[]
+}
+
+type TVoice = { type: "soprano" | "alto" | "tenor" | "bass" } & { measures: (TSolfegeNote | TSolfegeRest)[] }
+
 export type TScoreKeySignature = {
   tonic: TBaseLetterNoteName,
   mode: "major" // "major" | "minor"; for now just assume mode is always major

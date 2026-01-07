@@ -1,72 +1,43 @@
 import { bass as sound } from "./wave-tables/bass.ts"
-import { isAudioNote, toDurationInBeats } from "./core/utils"
-import type { TAudioNote, TSolfegeNote, TSolfegeRest } from "./core/types"
-import { solfegeToAudioNotes } from "./core/solfegeToAudio"
-import { solfegeNoteRelativeOctave, tempo } from "./core/constants"
+import { scheduleAndPlay } from "./core/solfegeToAudio"
+import { useState } from "react"
+// import { parseToSolfege } from "./core/parseToSolfege.ts"
+import type { TScore, TSolfegeNote, TSolfegeRest } from "./core/types.ts"
+import { tempo } from "./core/constants.ts"
+import { notes } from "./mock-data.ts"
 
+function createScore(measures: (TSolfegeNote | TSolfegeRest)[]): TScore {
+  const score: TScore = {
+    metadata: {
+      arrangedBy: "", composedBy: "", keySignature: { mode: "major", tonic: "C" }, tempo: tempo.Andante, timeSignature: { beatsPerBar: 4 }, title: ""
+    },
+    voices: [
+      { type: "soprano", measures }
+    ]
+  }
+  return score
+}
 
 export default function App() {
-
-  function playNote(audioCtx: AudioContext, waveForm: PeriodicWave, cursor: number, note: TAudioNote) {
-    if (!audioCtx) { return }
-    const osc = audioCtx.createOscillator()
-    osc.frequency.value = note.frequency
-    osc.setPeriodicWave(waveForm)
-    osc.connect(audioCtx.destination)
-    osc.start(cursor)
-    osc.stop(cursor + note.durationInSec)
+  const [solfegeString, setSolfegeString] = useState("")
+  function handler() {
+    // parseToSolfege(solfegeString)
+    const score = createScore(notes)
+    void scheduleAndPlay(sound, score)
   }
-
-  function playSound() {
-    const audioCtx = new AudioContext()
-    const waveForm = audioCtx.createPeriodicWave(sound.real, sound.imag)
-
-    const solfegeNotes: (TSolfegeNote | TSolfegeRest)[] = [
-      { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "f", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "s", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "s", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "f", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "r", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "d", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "d", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "r", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-      { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1.5) },
-      { type: "note", solfege: "r", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(2) },
-      { type: "note", solfege: "d", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(2) },
-    ]
-
-
-    // const solfegeNotes: (TSolfegeNote | TSolfegeRest)[] = [
-    //   { type: "note", solfege: "d", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "r", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "m", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "f", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "s", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "l", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "t", relativeOctave: solfegeNoteRelativeOctave.zero, durationInBeats: toDurationInBeats(1) },
-    //   { type: "note", solfege: "d", relativeOctave: solfegeNoteRelativeOctave.up_1, durationInBeats: toDurationInBeats(1) },
-    // ]
-    //
-    const notes = solfegeToAudioNotes({ mode: "major", tonic: "Ab" }, tempo.Andante, solfegeNotes)
-
-    let cursor = audioCtx.currentTime
-    for (const noteOrRest of notes) {
-      if (isAudioNote(noteOrRest)) {
-        playNote(audioCtx, waveForm, cursor, noteOrRest)
-        cursor += noteOrRest.durationInSec
-      } else {  // it's a rest
-        cursor += noteOrRest.durationInSec
-      }
-    }
-  }
-
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <button className="bg-pink-600 text-white rounded px-4 py-2 hover:bg-pink-700 transition-colors shadow cursor-pointer" onClick={() => playSound()}>play sound</button>
+      <div className="flex flex-col gap-1 w-full max-w-100">
+        <textarea onChange={e => setSolfegeString(e.target.value.trim())} className="resize-none p-4 border rounded w-full h-90 text-2xl"></textarea>
+        <button
+          disabled={solfegeString.length == 0}
+          className="bg-pink-600 w-fit text-white rounded px-4 py-2 hover:bg-pink-700 transition-colors shadow cursor-pointer disabled:bg-pink-600/30 disabled:hover:bg-pink-600/30"
+          onClick={handler}
+        > play sound
+        </button>
+      </div>
     </div>
   )
 }
+
+
