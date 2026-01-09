@@ -15,9 +15,9 @@ function toVoiceOctave(val: 4): TVoiceOctave {
 }
 
 
-export const solfegeNoteRelativeOctaves = [-2, -1, 0, 1, 2] as const
+export const solfegeNoteRelativeOctaves = Object.freeze([-2, -1, 0, 1, 2] as const)
 
-export type TSolfegeNoteRelativeOctave = typeof solfegeNoteRelativeOctaves[number] & { __brand__: "RelativeOctave" }
+export type TSolfegeNoteRelativeOctave = typeof solfegeNoteRelativeOctaves[number] & { __brand__: "TSolfegeNoteRelativeOctave" }
 
 export const solfegeNoteRelativeOctave: {  // explicit typing so that a user of this object does not need to cast props to TSolfegeNoteRelativeOctave
   down_2: TSolfegeNoteRelativeOctave,
@@ -39,27 +39,22 @@ export const letterNoteRelativeOctave = {
   one: 1,
 } as const
 
-// export const baseSolfegeNotes: TSolfegeNoteName[] = ["d", "r", "m", "f", "s", "l", "t"] as const
-export const baseSolfegeNotes = ["d", "r", "m", "f", "s", "l", "t"] as const
-
-export type TSolfegeNoteName = typeof baseSolfegeNotes[number]
-
-// export type TSolfegeNoteName = "d" | "r" | "m" | "f" | "s" | "l" | "t"
-//
-export const baseSolfegeNote = {
-  Doh: baseSolfegeNotes[0] as TSolfegeNoteName,   // explicit casting because branded type
-  Ray: baseSolfegeNotes[1] as TSolfegeNoteName,
-  Mee: baseSolfegeNotes[2] as TSolfegeNoteName,
-  Fah: baseSolfegeNotes[3] as TSolfegeNoteName,
-  Soh: baseSolfegeNotes[4] as TSolfegeNoteName,
-  Lah: baseSolfegeNotes[5] as TSolfegeNoteName,
-  Tee: baseSolfegeNotes[6] as TSolfegeNoteName,
+export const baseSolfegeNotes = {
+  0: "d",
+  1: "de",
+  2: "r",
+  3: "re",
+  4: "m",
+  5: "f",
+  6: "fe",
+  7: "s",
+  8: "se",
+  9: "l",
+  10: "ta",
+  11: "t"
 } as const
 
-
-
-
-export const baseLetterNotes = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const
+export const baseLetterNotes = Object.freeze(['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const)
 
 export const pianoNoteFrequency = {
   Bb1: 58.27,

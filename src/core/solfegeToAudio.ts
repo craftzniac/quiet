@@ -1,22 +1,27 @@
+import { bass as sound } from "../wave-tables/bass"
 import {
-  baseLetterNotes, baseSolfegeNote,
+  baseLetterNotes,
   baseSolfegeNotes, voiceOctave,
-  type TSolfegeNoteRelativeOctave, type TSolfegeNoteName,
+  type TSolfegeNoteRelativeOctave,
   solfegeNoteRelativeOctave, baseScaleGenMove,
-  letterNoteRelativeOctave, pianoNoteFrequency, type TVoiceOctave
+  letterNoteRelativeOctave, pianoNoteFrequency, type TVoiceOctave,
 } from "./constants"
+import type { ScoreMetadata } from "./dataclasses"
 import type {
   TAudioNote, TAudioRest,
   TBaseLetterNoteName, TBaseLetterNoteIndex,
   TBaseScaleGenMove, TLetterNoteName,
   TScoreKeySignature, TScoreTempoInBPM,
-  TSolfegeNote, TSolfegeRest,
-  TBaseLetterNotePosition, TScore,
+  TBaseLetterNotePosition,
   TSoundWave, TLetterNoteRelativeOctave,
-  TDurationInBeats, TLetterNoteFrequency
+  TDurationInBeats, TLetterNoteFrequency,
+  TSolfegeEvent,
+  TAudioEvent,
+  TSolfegeNoteName,
 } from "./types"
+import { getSolfegeNoteIndexFromName, getSolfegeNoteNameFromIndex } from "./utils"
 
-export function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScoreTempoInBPM, notes: (TSolfegeNote | TSolfegeRest)[]): (TAudioNote | TAudioRest)[] {
+function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScoreTempoInBPM, notes: TSolfegeEvent[]): TAudioEvent[] {
   const audioNotes: (TAudioNote | TAudioRest)[] = []
   const solfegeNoteToLetterNoteMap = createSolfegeToLetterNoteMap(keySignature.tonic)
   for (const solfegeNote of notes) {
@@ -64,6 +69,17 @@ function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePositio
   return { baseLetterNoteIndex: toBaseLetterNoteIndex(noteIndex), baseLetterNoteName: noteName, baseLetterNoteRelOctave: toLetterNoteRelativeOctave(relOctave) }
 }
 
+function getNextSolfegeNoteInScale(currSolfegeNote: TSolfegeNoteName, forwardMove: TBaseScaleGenMove, baseSolfaNotes: typeof baseSolfegeNotes): TSolfegeNoteName {
+  const currPosInScale = getSolfegeNoteIndexFromName(currSolfegeNote, baseSolfaNotes)
+  if (currPosInScale == null) {
+    throw new Error("calculation for solfege note index was wrong")
+  }
+  const nextNote = getSolfegeNoteNameFromIndex(currPosInScale + forwardMove, baseSolfaNotes)
+  if (nextNote == null) {
+    throw new Error("calculation for solfege note index was wrong")
+  }
+  return nextNote
+}
 
 /**
  * @returns {TBaseLetterNoteIndex} the index of a base letter note from the base letter note array
@@ -90,22 +106,27 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
     baseLetterNoteName: scoreKey,
     baseLetterNoteRelOctave: letterNoteRelativeOctave.zero
   }
-  baseScale.set(baseSolfegeNote.Doh, dohNotePosition)
+  baseScale.set(baseSolfegeNotes[0], dohNotePosition)
 
-  // use W-W-H-W-W-W-H
+  // use W-W-H-W-W-W
   const pattern = [baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.ONE, baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.TWO] as const   // generate base scale using pattern [2,2,1,2,2,2] -- major scale
 
-  let noteInScale = dohNotePosition
-
-  const solfegeNotes = baseSolfegeNotes
+  let letterNoteInScale = dohNotePosition
+  let solfegeNoteInScale: TSolfegeNoteName | null = baseSolfegeNotes[0]
 
   for (let i = 0; i < pattern.length; i++) {
     const move = pattern[i];
-    noteInScale = getNextLetterNotePositionInScale(noteInScale, move, baseLetterNotes)
+    letterNoteInScale = getNextLetterNotePositionInScale(letterNoteInScale, move, baseLetterNotes)
     // doing [i+1] instead of [i]  because the first note in solfegeNotes - Doh note, is already set in the map
-    baseScale.set(solfegeNotes[i + 1], noteInScale)
-  }
 
+    solfegeNoteInScale = getNextSolfegeNoteInScale(solfegeNoteInScale, move, baseSolfegeNotes);
+    if (solfegeNoteInScale == null) {
+      throw new Error("Scale gen pattern is most likely wrong")
+    }
+
+    baseScale.set(solfegeNoteInScale, letterNoteInScale)
+  }
+  console.log("basescale:", baseScale)
   const scale: Map<TSolfegeNoteRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> = new Map()
   /*
    * Sample resulting scale:
@@ -186,10 +207,11 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
 }
 
 
-export function scheduleAndPlay(soundWave: TSoundWave, score: TScore) {
+export function scheduleAndPlay(scoreMetadata: ScoreMetadata, solfegeEvents: TSolfegeEvent[]) {
+  const soundWave: TSoundWave = sound
   const audioCtx = new AudioContext()
   const waveForm = audioCtx.createPeriodicWave(soundWave.real, soundWave.imag)
-  const notes = solfegeToAudioNotes(score.metadata.keySignature, score.metadata.tempo, score.voices[0].measures)
+  const notes = solfegeToAudioNotes(scoreMetadata.keySignature, scoreMetadata.tempo, solfegeEvents)
 
   let cursor = audioCtx.currentTime
   for (const noteOrRest of notes) {

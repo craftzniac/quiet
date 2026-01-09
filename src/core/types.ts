@@ -1,4 +1,6 @@
-import { type pianoNoteFrequency, type baseLetterNotes, tempo, type TSolfegeNoteRelativeOctave, type TSolfegeNoteName, letterNoteRelativeOctave, baseScaleGenMove } from "./constants";
+import { type pianoNoteFrequency, type baseLetterNotes, tempo, letterNoteRelativeOctave, baseScaleGenMove, baseSolfegeNotes, type TSolfegeNoteRelativeOctave } from "./constants";
+
+export type TResult<V, E = Error> = { ok: true, value: V } | { ok: false, error: E }
 
 export type TSoundWave = { real: number[], imag: number[] }
 
@@ -10,23 +12,19 @@ export type TBaseLetterNotePosition = {
 
 export type TBaseScaleGenMove = typeof baseScaleGenMove[keyof typeof baseScaleGenMove]
 
-// export type TResult<T, E extends Error = Error> = { ok: true, value: T } | { ok: false, error: E }
+export type TSolfegeEvent = TSolfegeNote | TSolfegeRest
 
-type TScoreMetadata = {
-  title: string,
-  keySignature: TScoreKeySignature,
-  timeSignature: TScoreTimeSignature,
-  composedBy: string,
-  arrangedBy: string,
-  tempo: TScoreTempoInBPM,
+export type TSolfegeNote = {
+  type: "note",
+  solfege: TSolfegeNoteName,
+  relativeOctave: TSolfegeNoteRelativeOctave,
+  durationInBeats: TDurationInBeats
 }
 
-export type TScore = {
-  metadata: TScoreMetadata,
-  voices: TVoice[]
+export type TSolfegeRest = {
+  type: "rest",
+  durationInBeats: TDurationInBeats
 }
-
-type TVoice = { type: "soprano" | "alto" | "tenor" | "bass" } & { measures: (TSolfegeNote | TSolfegeRest)[] }
 
 export type TScoreKeySignature = {
   tonic: TBaseLetterNoteName,
@@ -42,6 +40,7 @@ export type TBaseLetterNoteIndex = number & { __brand__: "BaseLetterNotePosition
 
 export type TRest = { duration: number }
 
+export type TAudioEvent = TAudioNote | TAudioRest
 export type TAudioNote = {
   type: "note",
   frequency: TLetterNoteFrequency,
@@ -58,22 +57,30 @@ export type TLetterNoteFrequency = typeof pianoNoteFrequency[keyof typeof pianoN
 export type TLetterNoteName = keyof typeof pianoNoteFrequency;
 
 
-export type TDurationInBeats = number & { __brand__: "DurationInBeats" }
-
-export type TSolfegeNote = {
-  type: "note",
-  solfege: TSolfegeNoteName,
-  relativeOctave: TSolfegeNoteRelativeOctave,
-  durationInBeats: TDurationInBeats
-}
+export type TDurationInBeats = number
 
 export type TLetterNoteRelativeOctave = typeof letterNoteRelativeOctave[
   keyof typeof letterNoteRelativeOctave
 ]
 
-export type TSolfegeRest = {
-  type: "rest",
-  durationInBeats: TDurationInBeats
+export type TScoreTempoInBPM = typeof tempo[keyof typeof tempo]
+
+
+export type TParserError = { position: number, errorMsg: string }
+
+
+export type TTokenizerError = { position: number, errorMsg: string, errorChar: TChar }   // errorMsg: "Invalid token '@' at position 3"
+
+
+export type TChar = string & { __brand__: "Char" }
+
+
+export type TSolfegeNoteName = typeof baseSolfegeNotes[keyof typeof baseSolfegeNotes]
+
+export type TBar = {
+  id: string,
+  rawSolfege: string
 }
 
-export type TScoreTempoInBPM = typeof tempo[keyof typeof tempo] 
+export type TSolfegeNoteIndex = keyof typeof baseSolfegeNotes
+export type TBaseSolfegeNotes = typeof baseSolfegeNotes
