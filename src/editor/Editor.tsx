@@ -6,7 +6,7 @@ import { generateId } from "@/core/utils";
 import { Input } from "@/components/ui/input";
 import { singleBarParser } from "@/core/parseToSolfege";
 import { scheduleAndPlay } from "@/core/solfegeToAudio";
-import { ScoreMetadata } from "@/core/dataclasses";
+import { ParserError, ScoreMetadata, TokenizerError } from "@/core/dataclasses";
 import type { TBar, TSolfegeEvent } from "@/core/types";
 
 function createBar(): TBar {
@@ -51,7 +51,7 @@ export function Editor() {
     })
   }
 
-  function play() {
+  function play(): void {
     // check that no bar is empty
     const emptybars = getEmptyBars(bars)
     if (emptybars.length === 1) {
@@ -65,10 +65,18 @@ export function Editor() {
     }
 
     const aggregateSolfegeEvents: TSolfegeEvent[] = []
-    for (const bar of bars) {
-      const parseres = singleBarParser(bar.rawSolfege)
+    for (let i = 0; i < bars.length; i++) {
+      const parseres = singleBarParser(bars[i].rawSolfege)
       if (parseres.ok == false) {
-        alert(parseres.error)
+        let message = ""
+        if (parseres.error instanceof ParserError) {
+          message = parseres.error.errorMsg
+        } else if (parseres.error instanceof TokenizerError) {
+          message = parseres.error.errorMsg
+        } else {
+          message = parseres.error
+        }
+        alert(`Bar(${i + 1}): ${message}`)
         return
       }
       aggregateSolfegeEvents.push(...parseres.value.events)

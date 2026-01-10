@@ -1,5 +1,5 @@
 import { tempo } from "./constants"
-import type { TScoreKeySignature, TScoreTempoInBPM, TScoreTimeSignature } from "./types"
+import type { TChar, TScoreKeySignature, TScoreTempoInBPM, TScoreTimeSignature } from "./types"
 
 export class ScoreMetadata {
   title: string
@@ -15,5 +15,25 @@ export class ScoreMetadata {
     this.composedBy = ""
     this.arrangedBy = ""
     this.tempo = tempo.Andante
+  }
+}
+
+export class ParserError {
+  readonly barIndex: number
+  readonly errorMsg: string
+  constructor(errorMsg: string, barIndex: number) {
+    this.errorMsg = errorMsg
+    this.barIndex = barIndex
+  }
+}
+
+export class TokenizerError {
+  readonly position: number
+  readonly errorMsg: string
+  readonly errorChar: TChar
+  constructor(errorMsg: string, position: number, errorChar: TChar) {
+    this.position = position
+    this.errorMsg = errorMsg
+    this.errorChar = errorChar
   }
 }

@@ -1,7 +1,8 @@
+import type { ParserError, TokenizerError } from "./dataclasses";
 import { Parser, Tokenizer, type Bar } from "./notationParser";
-import type { TParserError, TResult } from "./types";
+import type { TResult } from "./types";
 
-export function singleBarParser(_input: string): TResult<Bar, TParserError | string> {     // expects raw solfege which are not dli
+export function singleBarParser(_input: string): TResult<Bar, ParserError | TokenizerError | string> {     // expects raw solfege which are not dli
   // check that the input does not start or end with a pipe (|) 
   const pipeChar = "|"
   let input = _input.trim()

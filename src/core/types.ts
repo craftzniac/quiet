@@ -66,10 +66,10 @@ export type TLetterNoteRelativeOctave = typeof letterNoteRelativeOctave[
 export type TScoreTempoInBPM = typeof tempo[keyof typeof tempo]
 
 
-export type TParserError = { position: number, errorMsg: string }
+// export type TParserError = { position: number, errorMsg: string }
 
 
-export type TTokenizerError = { position: number, errorMsg: string, errorChar: TChar }   // errorMsg: "Invalid token '@' at position 3"
+// export type TTokenizerError = { position: number, errorMsg: string, errorChar: TChar }   // errorMsg: "Invalid token '@' at position 3"
 
 
 export type TChar = string & { __brand__: "Char" }

@@ -1,6 +1,8 @@
 import { type TSolfegeNoteRelativeOctave } from "./constants";
-import type { TChar, TDurationInBeats, TParserError, TResult, TSolfegeEvent, TSolfegeNote, TSolfegeNoteName, TSolfegeRest, TTokenizerError } from "./types"
+import type { TChar, TDurationInBeats, TResult, TSolfegeEvent, TSolfegeNote, TSolfegeNoteName, TSolfegeRest } from "./types"
+import { TokenizerError } from "./dataclasses";
 import { isSolfegeNoteName, toChar, todo } from "./utils"
+import { ParserError } from "./dataclasses";
 
 // START -------------------------------------- TOKEN TYPES ----------------------
 
@@ -227,7 +229,7 @@ export class Tokenizer {
     this.cursor--
   }
 
-  tokenize(): TResult<Array<Token>, TTokenizerError> {
+  tokenize(): TResult<Array<Token>, TokenizerError> {
     while (this.cursor < this.rawText.length) {
       switch (this.state) {
         case TokenizerState.Data: {
@@ -267,10 +269,12 @@ export class Tokenizer {
             this.flushTokenBuffer()
           } else {
             const position = this.cursor - 1
-            return { ok: false, error: { errorChar: char, errorMsg: `Invalid token '${char}' at position ${position}`, position } }
+            return {
+              ok: false, error: new TokenizerError(`Invalid token '${char}' at position ${position}`, position, char)
+            }
           }
-        }
           break
+        }
         case TokenizerState.Note: {
           const char = this.consumeNextChar()
           if (isSolfegeNoteName(char)) {
@@ -287,16 +291,17 @@ export class Tokenizer {
                   note = (char + "e") as TSolfegeNoteName
                 }
               }
+              // FIX: you need to skip the "e" or the "a" but currently calling this.consumeForward() here breaks the code and causes this.bars to be [] 
+              // this.consumeForward()
             }
             this.currTokenBuffer = new NoteToken(note)
           }
           this.flushTokenBuffer()
           this.switchState(TokenizerState.Data)
-        }
           break
+        }
         default:
           throw new Error("Unrecognized tokenizer state")
-
       }
     }
     return { ok: true, value: this.tokens }
@@ -309,6 +314,10 @@ export class Tokenizer {
     } else {
       return null
     }
+  }
+
+  private consumeForward() {
+    this.cursor++
   }
 
   private consumeNextChar(): TChar {
@@ -354,8 +363,8 @@ const ParserState = {
 type TParserState = typeof ParserState[keyof typeof ParserState]
 
 export class Bar {
-  events: TSolfegeEvent[]
-  private barIndex: number
+  readonly events: TSolfegeEvent[]
+  readonly barIndex: number
   constructor(barIndex: number) {
     this.barIndex = barIndex
     this.events = []
@@ -431,14 +440,14 @@ export class Parser {
   }
 
 
-  parse(): TResult<Array<Bar>, TParserError> {
+  parse(): TResult<Array<Bar>, ParserError> {
     while (this.cursor < this.inputTokens.length) {
       this.getNextBar()
     }
     return this.resultOk()
   }
 
-  getNextBar(): TResult<Bar, TParserError> {
+  getNextBar(): TResult<Bar, ParserError> {
     let breakOut = false
     while ((this.cursor < this.inputTokens.length) && breakOut === false) {
       switch (this.state) {
@@ -539,6 +548,7 @@ export class Parser {
       }
     }
 
+    console.log("this.bars:", this.bars)
     return { ok: true, value: this.bars[this.bars.length - 1] }  // returns the last bar
   }
 
@@ -587,8 +597,10 @@ export class Parser {
     }
   }
 
-  private resultError(msg: string): { ok: false, error: TParserError } {
-    return { ok: false, error: { errorMsg: `bar(${this.barCount - 1}): ${msg}`, position: 0 } }
+  private resultError(msg: string): { ok: false, error: ParserError } {
+    return {
+      ok: false, error: new ParserError(msg, this.bars.length)
+    }
   }
 
   private resultOk(): { ok: true, value: Bar[] } {
