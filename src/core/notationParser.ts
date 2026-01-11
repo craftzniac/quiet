@@ -281,18 +281,20 @@ export class Tokenizer {
             let note: TSolfegeNoteName = char
             if (note === "d" || note === "r" || note === "f" || note === "s" || note === "t") {
               // peek ahead to know if next char is a "e" for d,r,f,s or "a" for t
+              console.log("a note with a minor")
               const nextChar = this.peekForward()
               if (note === "t") {
                 if (nextChar == "a") {
                   note = "ta"
+
+                  this.consumeForward()
                 }
               } else {
                 if (nextChar === "e") {
                   note = (char + "e") as TSolfegeNoteName
+                  this.consumeForward()
                 }
               }
-              // FIX: you need to skip the "e" or the "a" but currently calling this.consumeForward() here breaks the code and causes this.bars to be [] 
-              // this.consumeForward()
             }
             this.currTokenBuffer = new NoteToken(note)
           }

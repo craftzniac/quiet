@@ -19,7 +19,7 @@ import type {
   TAudioEvent,
   TSolfegeNoteName,
 } from "./types"
-import { getSolfegeNoteIndexFromName, getSolfegeNoteNameFromIndex } from "./utils"
+import { baseSolfegeNotesLength, getSolfegeNoteIndexFromName, getSolfegeNoteNameFromIndex } from "./utils"
 
 function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScoreTempoInBPM, notes: TSolfegeEvent[]): TAudioEvent[] {
   const audioNotes: (TAudioNote | TAudioRest)[] = []
@@ -57,11 +57,12 @@ function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScor
 }
 
 
-function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePosition, forwardMove: TBaseScaleGenMove, baseLetterNoteNames: typeof baseLetterNotes): TBaseLetterNotePosition {
+function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePosition, baseLetterNoteNames: typeof baseLetterNotes): TBaseLetterNotePosition {
   const { baseLetterNoteIndex: currLetterNoteIndex, baseLetterNoteRelOctave: currLeterNoteRelOctave } = currLetterNote
   const modulo = baseLetterNoteNames.length
-  const relOctave = Math.floor((currLetterNoteIndex + forwardMove + (currLeterNoteRelOctave * modulo)) / modulo)
-  const noteIndex = (currLetterNoteIndex + forwardMove) % modulo
+  const nextLetterNoteIndex = currLetterNoteIndex + 1
+  const relOctave = Math.floor((nextLetterNoteIndex + (currLeterNoteRelOctave * modulo)) / modulo)
+  const noteIndex = nextLetterNoteIndex % modulo
   const noteName = baseLetterNoteNames[noteIndex]
   if (!noteName) {
     throw new Error("calculation for letter note index was wrong")
@@ -69,12 +70,12 @@ function getNextLetterNotePositionInScale(currLetterNote: TBaseLetterNotePositio
   return { baseLetterNoteIndex: toBaseLetterNoteIndex(noteIndex), baseLetterNoteName: noteName, baseLetterNoteRelOctave: toLetterNoteRelativeOctave(relOctave) }
 }
 
-function getNextSolfegeNoteInScale(currSolfegeNote: TSolfegeNoteName, forwardMove: TBaseScaleGenMove, baseSolfaNotes: typeof baseSolfegeNotes): TSolfegeNoteName {
+function getNextSolfegeNoteInScale(currSolfegeNote: TSolfegeNoteName, baseSolfaNotes: typeof baseSolfegeNotes): TSolfegeNoteName {
   const currPosInScale = getSolfegeNoteIndexFromName(currSolfegeNote, baseSolfaNotes)
   if (currPosInScale == null) {
     throw new Error("calculation for solfege note index was wrong")
   }
-  const nextNote = getSolfegeNoteNameFromIndex(currPosInScale + forwardMove, baseSolfaNotes)
+  const nextNote = getSolfegeNoteNameFromIndex(currPosInScale + 1, baseSolfaNotes)
   if (nextNote == null) {
     throw new Error("calculation for solfege note index was wrong")
   }
@@ -108,18 +109,13 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
   }
   baseScale.set(baseSolfegeNotes[0], dohNotePosition)
 
-  // use W-W-H-W-W-W
-  const pattern = [baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.ONE, baseScaleGenMove.TWO, baseScaleGenMove.TWO, baseScaleGenMove.TWO] as const   // generate base scale using pattern [2,2,1,2,2,2] -- major scale
-
   let letterNoteInScale = dohNotePosition
   let solfegeNoteInScale: TSolfegeNoteName | null = baseSolfegeNotes[0]
 
-  for (let i = 0; i < pattern.length; i++) {
-    const move = pattern[i];
-    letterNoteInScale = getNextLetterNotePositionInScale(letterNoteInScale, move, baseLetterNotes)
-    // doing [i+1] instead of [i]  because the first note in solfegeNotes - Doh note, is already set in the map
+  for (let i = 0; i < baseSolfegeNotesLength() - 1; i++) {  // 
+    letterNoteInScale = getNextLetterNotePositionInScale(letterNoteInScale,  baseLetterNotes)
+    solfegeNoteInScale = getNextSolfegeNoteInScale(solfegeNoteInScale,  baseSolfegeNotes);
 
-    solfegeNoteInScale = getNextSolfegeNoteInScale(solfegeNoteInScale, move, baseSolfegeNotes);
     if (solfegeNoteInScale == null) {
       throw new Error("Scale gen pattern is most likely wrong")
     }

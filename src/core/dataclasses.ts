@@ -10,7 +10,7 @@ export class ScoreMetadata {
   tempo: TScoreTempoInBPM
   constructor() {
     this.title = ""
-    this.keySignature = { mode: "major", tonic: "C" }
+    this.keySignature = { mode: "major", tonic: "F" }
     this.timeSignature = { beatsPerBar: 3 }
     this.composedBy = ""
     this.arrangedBy = ""

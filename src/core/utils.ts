@@ -46,3 +46,7 @@ export function getSolfegeNoteNameFromIndex(solfegeNoteIndex: number, solfegeNot
   return null
 }
 
+
+export function baseSolfegeNotesLength() {
+  return Object.keys(baseSolfegeNotes).length
+}
