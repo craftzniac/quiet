@@ -1,4 +1,4 @@
-import { bass as sound } from "../wave-tables/bass"
+import { bass  as sound } from "../wave-tables/bass"
 import {
   baseLetterNotes,
   baseSolfegeNotes, voiceOctave,
