@@ -3,14 +3,14 @@ import {
   baseLetterNotes,
   baseSolfegeNotes, voiceOctave,
   type TSolfegeNoteRelativeOctave,
-  solfegeNoteRelativeOctave, baseScaleGenMove,
+  solfegeNoteRelativeOctave,
   letterNoteRelativeOctave, pianoNoteFrequency, type TVoiceOctave,
 } from "./constants"
 import type { ScoreMetadata } from "./dataclasses"
 import type {
-  TAudioNote, TAudioRest,
+  TAudioNote,
   TBaseLetterNoteName, TBaseLetterNoteIndex,
-  TBaseScaleGenMove, TLetterNoteName,
+  TLetterNoteName,
   TScoreKeySignature, TScoreTempoInBPM,
   TBaseLetterNotePosition,
   TSoundWave, TLetterNoteRelativeOctave,
@@ -22,10 +22,10 @@ import type {
 import { baseSolfegeNotesLength, getSolfegeNoteIndexFromName, getSolfegeNoteNameFromIndex } from "./utils"
 
 function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScoreTempoInBPM, notes: TSolfegeEvent[]): TAudioEvent[] {
-  const audioNotes: (TAudioNote | TAudioRest)[] = []
+  const audioNotes: TAudioEvent[] = []
   const solfegeNoteToLetterNoteMap = createSolfegeToLetterNoteMap(keySignature.tonic)
   for (const solfegeNote of notes) {
-    let note: TAudioNote | TAudioRest | null = null
+    let note: TAudioEvent | null = null
 
     if (solfegeNote.type == "note") {
       const solfegeToLetterNoteNameMapForRelativeOctave = solfegeNoteToLetterNoteMap.get(solfegeNote.relativeOctave)
@@ -113,8 +113,8 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
   let solfegeNoteInScale: TSolfegeNoteName | null = baseSolfegeNotes[0]
 
   for (let i = 0; i < baseSolfegeNotesLength() - 1; i++) {  // 
-    letterNoteInScale = getNextLetterNotePositionInScale(letterNoteInScale,  baseLetterNotes)
-    solfegeNoteInScale = getNextSolfegeNoteInScale(solfegeNoteInScale,  baseSolfegeNotes);
+    letterNoteInScale = getNextLetterNotePositionInScale(letterNoteInScale, baseLetterNotes)
+    solfegeNoteInScale = getNextSolfegeNoteInScale(solfegeNoteInScale, baseSolfegeNotes);
 
     if (solfegeNoteInScale == null) {
       throw new Error("Scale gen pattern is most likely wrong")
@@ -122,7 +122,6 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
 
     baseScale.set(solfegeNoteInScale, letterNoteInScale)
   }
-  console.log("basescale:", baseScale)
   const scale: Map<TSolfegeNoteRelativeOctave, Map<TSolfegeNoteName, TLetterNoteName>> = new Map()
   /*
    * Sample resulting scale:
@@ -203,31 +202,42 @@ function createSolfegeToLetterNoteMap(scoreKey: TBaseLetterNoteName): Map<TSolfe
 }
 
 
-export function scheduleAndPlay(scoreMetadata: ScoreMetadata, solfegeEvents: TSolfegeEvent[]) {
-  const soundWave: TSoundWave = sound
-  const audioCtx = new AudioContext()
-  const waveForm = audioCtx.createPeriodicWave(soundWave.real, soundWave.imag)
-  const notes = solfegeToAudioNotes(scoreMetadata.keySignature, scoreMetadata.tempo, solfegeEvents)
+export function scheduleAndPlay(audioCtx: AudioContext, scoreMetadata: ScoreMetadata, solfegeEvents: TSolfegeEvent[]): Promise<void> {
+  return new Promise((resolve) => {
+    const soundWave: TSoundWave = sound
 
-  let cursor = audioCtx.currentTime
-  for (const noteOrRest of notes) {
-    if (isAudioNote(noteOrRest)) {
-      playNote(audioCtx, waveForm, cursor, noteOrRest)
-      cursor += noteOrRest.durationInSec
-    } else {  // it's a rest
-      cursor += noteOrRest.durationInSec
+    const waveForm = audioCtx.createPeriodicWave(soundWave.real, soundWave.imag)
+    const notes = solfegeToAudioNotes(scoreMetadata.keySignature, scoreMetadata.tempo, solfegeEvents)
+
+    let cursor = audioCtx.currentTime
+    let numOfOscillators = 0
+    for (const noteOrRest of notes) {
+      if (isAudioNote(noteOrRest)) {
+        const note = noteOrRest
+        const osc = audioCtx.createOscillator()
+        osc.frequency.value = note.frequency
+        osc.setPeriodicWave(waveForm)
+        osc.connect(audioCtx.destination)
+        osc.start(cursor)
+        osc.stop(cursor + note.durationInSec)
+
+        osc.onended = () => {
+          osc.disconnect()
+          numOfOscillators--
+
+          if (numOfOscillators == 0) {
+            resolve()
+            return
+          }
+        }
+
+        numOfOscillators++
+        cursor += noteOrRest.durationInSec
+      } else {  // it's a rest
+        cursor += noteOrRest.durationInSec
+      }
     }
-  }
-}
-
-function playNote(audioCtx: AudioContext, waveForm: PeriodicWave, cursor: number, note: TAudioNote) {
-  if (!audioCtx) { return }
-  const osc = audioCtx.createOscillator()
-  osc.frequency.value = note.frequency
-  osc.setPeriodicWave(waveForm)
-  osc.connect(audioCtx.destination)
-  osc.start(cursor)
-  osc.stop(cursor + note.durationInSec)
+  })
 }
 
 function toLetterNoteRelativeOctave(val: number): TLetterNoteRelativeOctave {
@@ -249,7 +259,7 @@ function durationInBeatsToDurationInSecs(durationInBeats: TDurationInBeats, scor
   return (durationInBeats * 60) / scoreTempo
 }
 
-function isAudioNote(val: TAudioNote | TAudioRest): val is TAudioNote {
+function isAudioNote(val: TAudioEvent): val is TAudioNote {
   return val.type == "note" && "durationInSec" in val && "frequency" in val && typeof val.frequency == "number"
 }
 
