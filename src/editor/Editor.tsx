@@ -1,4 +1,4 @@
-import { ArrowDownIcon, MinusIcon, PauseIcon, PlusIcon } from "lucide-react"
+import { MinusIcon, PauseIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { PlayIcon } from "lucide-react"

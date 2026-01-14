@@ -576,20 +576,20 @@ export class Parser {
 
   /**
    *
-   *      (col | bsd | barl)    --- (col | bsd | barl)    1
+   *      (col | barl)    --- (col | barl)    1
    *      dot                   --- dot                   0.333   e.g  :d.d.d:     // isn't supported rn so maybe make it illegal?
-   *      (col | bsd | barl)    ---  dot                  0.5
-   *      dot                   ---   (col | bsd | barl)  0.5
+   *      (col | barl)    ---  dot                  0.5
+   *      dot                   ---   (col | barl)  0.5
    *
    * */
   private getDurationBetween(prev: TPunctuation, curr: TPunctuation): TDurationInBeats {
-    if ((prev.type == "column" || prev.type == "barSubDivider" || prev.type == "barline") && (curr.type == "column" || curr.type == "barSubDivider" || curr.type == "barline")) {
+    if ((prev.type == "column" || prev.type == "barline") && (curr.type == "column" || curr.type == "barline")) {
       return beat.Full
     } else if (prev.type == "dot" && curr.type == "dot") {
       return beat.OneThird
-    } else if ((prev.type == "column" || prev.type == "barSubDivider" || prev.type == "barline") && curr.type == "dot") {
+    } else if ((prev.type == "column" || prev.type == "barline") && curr.type == "dot") {
       return beat.Half
-    } else if (prev.type == "dot" && (curr.type == "column" || curr.type == "barSubDivider" || curr.type == "barline")) {
+    } else if (prev.type == "dot" && (curr.type == "column" || curr.type == "barline")) {
       return beat.Half
     } else {
       throw new Error("Durations not recognized")
