@@ -1,5 +1,5 @@
-import { baseSolfegeNotes } from "./constants";
-import type { TBaseSolfegeNotes, TChar, TSolfegeNoteIndex, TSolfegeNoteName } from "./types";
+import { baseSolfegeNotes, tempo } from "./constants";
+import type { TBaseSolfegeNotes, TChar, TScoreTempoInBPM, TScoreTempoName, TSolfegeNoteIndex, TSolfegeNoteName } from "./types";
 
 export function generateId(): string {
   const length = 12
@@ -49,4 +49,27 @@ export function getSolfegeNoteNameFromIndex(solfegeNoteIndex: number, solfegeNot
 
 export function baseSolfegeNotesLength() {
   return Object.keys(baseSolfegeNotes).length
+}
+
+export function getTempoNameFromValue(val: number): TScoreTempoName | null {
+  for (const name of Object.keys(tempo)) {
+    const value = tempo[name as TScoreTempoName]
+    if (val === value) {
+      return name as TScoreTempoName
+    }
+  }
+  return null
+}
+
+export function isTempoValue(val: number): val is TScoreTempoInBPM {
+  const name = getTempoNameFromValue(val)
+  return !!name
+}
+
+export function toIntOrNull(val: string): number | null {
+  try { const intVal = parseInt(val); return intVal } catch { return null }
+}
+
+export function isBeatsPerBar(val: number): val is (3 | 4) {
+  return val == 3 || val == 4
 }

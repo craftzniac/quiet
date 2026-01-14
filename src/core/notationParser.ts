@@ -47,18 +47,20 @@ class DotToken extends Token {
   }
 }
 
-/**
+/** 
+ *
+ *  WARN: for now "/" is an illegal char
  *   "/"
  * */
-class BarSubDividerToken extends Token {
-  type: "barSubDivider"
-  value: "/"
-  constructor() {
-    super()
-    this.type = "barSubDivider"
-    this.value = "/"
-  }
-}
+// class BarSubDividerToken extends Token {
+//   type: "barSubDivider"
+//   value: "/"
+//   constructor() {
+//     super()
+//     this.type = "barSubDivider"
+//     this.value = "/"
+//   }
+// }
 
 /**
  *   "|"
@@ -264,10 +266,7 @@ export class Tokenizer {
           } else if (char == "-") {
             this.currTokenBuffer = new SustainToken()
             this.flushTokenBuffer()
-          } else if (char == "/") {
-            this.currTokenBuffer = new BarSubDividerToken()
-            this.flushTokenBuffer()
-          } else {
+          } else {   // handle illegal character
             const position = this.cursor - 1
             return {
               ok: false, error: new TokenizerError(`Invalid token '${char}' at position ${position}`, position, char)
@@ -281,7 +280,6 @@ export class Tokenizer {
             let note: TSolfegeNoteName = char
             if (note === "d" || note === "r" || note === "f" || note === "s" || note === "t") {
               // peek ahead to know if next char is a "e" for d,r,f,s or "a" for t
-              console.log("a note with a minor")
               const nextChar = this.peekForward()
               if (note === "t") {
                 if (nextChar == "a") {
@@ -385,7 +383,7 @@ function createSolfegeRestEvent(): TSolfegeRest {
 }
 
 
-type TPunctuation = ColumnToken | BarlineToken | BarSubDividerToken | DotToken
+type TPunctuation = ColumnToken | BarlineToken | DotToken
 
 export class Parser {
   private inputTokens: Array<Token>
@@ -550,7 +548,6 @@ export class Parser {
       }
     }
 
-    console.log("this.bars:", this.bars)
     return { ok: true, value: this.bars[this.bars.length - 1] }  // returns the last bar
   }
 

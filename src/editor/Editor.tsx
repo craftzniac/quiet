@@ -1,33 +1,46 @@
-import { MinusIcon, PauseIcon, PlusIcon } from "lucide-react"
+import { ArrowDownIcon, MinusIcon, PauseIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import { PlayIcon } from "lucide-react"
-import { generateId } from "@/core/utils";
+import { generateId, getTempoNameFromValue, isBeatsPerBar, isTempoValue, toIntOrNull } from "@/core/utils";
 import { Input } from "@/components/ui/input";
-import { singleBarParser } from "@/core/parseToSolfege";
+import { produceValidSolfegeEventsFromRawText } from "@/core/parseToSolfege";
 import { scheduleAndPlay } from "@/core/solfegeToAudio";
-import { ParserError, ScoreMetadata, TokenizerError } from "@/core/dataclasses";
-import type { TBar, TSolfegeEvent } from "@/core/types";
+import { ScoreMetadata } from "@/core/dataclasses";
+import type { TBar, TBaseLetterNoteName, TScoreTempoInBPM } from "@/core/types";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { baseLetterNotes, tempo } from "@/core/constants";
 
 function createBar(): TBar {
   return { id: generateId(), rawSolfege: "" }
 }
 
-function getEmptyBars(bars: Array<TBar>): number[] {
-  const emptybars: number[] = []
-  for (let i = 0; i < bars.length; i++) {
-    if (bars[i].rawSolfege.trim() == "") emptybars.push(i)
-  }
-  return emptybars
-}
-
 export function Editor() {
-  const [scoreMetadata] = useState(new ScoreMetadata())
+  const [scoreMetadata, setScoreMetaData] = useState(new ScoreMetadata())
   const [bars, setBars] = useState<Array<TBar>>([createBar()])
   const [playerStatus, setPlayerStatus] = useState<"playing" | "paused" | "not_started">("not_started")
   const audioCtxRef = useRef<AudioContext | null>(null)
   if (audioCtxRef.current == null) {
     audioCtxRef.current = new AudioContext()
+  }
+
+  function updateScoreKey(newKey: TBaseLetterNoteName) {
+    setScoreMetaData(prev => ({ ...prev, keySignature: { ...prev.keySignature, tonic: newKey } }))
+  }
+
+  function updateScoreTempo(newTempo: TScoreTempoInBPM) {
+    setScoreMetaData(prev => ({ ...prev, tempo: newTempo }))
+  }
+
+  function updateBeatsPerBar(e: string) {
+    const beatsPerBar = toIntOrNull(e)
+    if (beatsPerBar == null) {
+      return
+    }
+    const isValid = isBeatsPerBar(beatsPerBar)
+    if (isValid) {
+      setScoreMetaData(prev => ({ ...prev, timeSignature: { ...prev.timeSignature, beatsPerBar } }))
+    }
   }
 
   function addBar() {
@@ -58,39 +71,15 @@ export function Editor() {
   async function playOrPause(): Promise<void> {
     switch (playerStatus) {
       case "not_started": {
-        // check that no bar is empty
-        const emptybars = getEmptyBars(bars)
-        if (emptybars.length === 1) {
-          alert(`Bar ${emptybars.map(ind => ind + 1).join(", ")} is empty!`)
+        const res = produceValidSolfegeEventsFromRawText(bars.map(b => b.rawSolfege), scoreMetadata.timeSignature.beatsPerBar)
+        if (res.ok === false) {
+          alert(res.error.errorMsg)
           return
         }
-
-        if (emptybars.length > 1) {
-          alert(`Bars ${emptybars.map(ind => ind + 1).join(", ")} are empty!`)
-          return
-        }
-
         setPlayerStatus("playing")
         const audioCtx = audioCtxRef.current!
         audioCtx.resume()
-        const aggregateSolfegeEvents: TSolfegeEvent[] = []
-        for (let i = 0; i < bars.length; i++) {
-          const parseres = singleBarParser(bars[i].rawSolfege)
-          if (parseres.ok == false) {
-            let message = ""
-            if (parseres.error instanceof ParserError) {
-              message = parseres.error.errorMsg
-            } else if (parseres.error instanceof TokenizerError) {
-              message = parseres.error.errorMsg
-            } else {
-              message = parseres.error
-            }
-            alert(`Bar(${i + 1}): ${message}`)
-            return
-          }
-          aggregateSolfegeEvents.push(...parseres.value.events)
-        }
-        await scheduleAndPlay(audioCtx, scoreMetadata, aggregateSolfegeEvents)
+        await scheduleAndPlay(audioCtx, scoreMetadata, res.value)
         setPlayerStatus("not_started")
         break
       }
@@ -132,10 +121,72 @@ export function Editor() {
       </header>
 
       <main className="h-full w-full flex justify-center bg-gray-100 overflow-auto px-4 py-8">
-        <div className="w-full max-w-230 h-fit aspect-[1/1.414] shadow bg-white p-8 gap-5 flex flex-col">
+        <div className="w-full max-w-230 h-fit aspect-[1/1.414] shadow bg-white p-8 gap-12 flex flex-col">
           <div className="flex w-full">
-            <div className="flex w-full justify-center">
-              <h2 className="text-2xl font-medium">Hello world song</h2>
+            <div className="flex w-full gap-1 items-center">
+              <div className="flex flex-col gap-0.5">
+                <div>
+                  <Select defaultValue={scoreMetadata.timeSignature.beatsPerBar.toString()} onValueChange={(e) => updateBeatsPerBar(e)}>
+                    <SelectTrigger className="border-none shadow-none justify-start px-1">
+                      <SelectValue asChild>
+                        <span>{scoreMetadata.timeSignature.beatsPerBar} / 4</span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="3">{3}</SelectItem>
+                        <SelectItem value="4">{4}</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-1 w-fit">
+                  <span className="flex items-center gap-1">
+                    <p>Key</p>
+                    <Select defaultValue={scoreMetadata.keySignature.tonic} onValueChange={(e) => updateScoreKey(e as TBaseLetterNoteName)}>
+                      <SelectTrigger>
+                        <SelectValue>{scoreMetadata.keySignature.tonic}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {baseLetterNotes.map(n => <SelectItem value={n}>{n}</SelectItem>)}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </span>
+                  <span>
+                    <Select defaultValue={scoreMetadata.tempo.toString()} onValueChange={e => {
+                      const val = toIntOrNull(e)
+                      if (val == null) {
+                        return
+                      }
+                      const isValid = isTempoValue(val)
+                      if (isValid) {
+                        updateScoreTempo(val)
+                      }
+                    }}>
+                      <SelectTrigger className="border-none shadow-none">
+                        <SelectValue>({getTempoNameFromValue(scoreMetadata.tempo)})</SelectValue>
+                        <SelectContent>
+                          <SelectGroup>
+                            {
+                              Object.values(tempo).map(val => <SelectItem value={val.toString()}>{getTempoNameFromValue(val)}</SelectItem>)
+                            }
+                          </SelectGroup>
+                        </SelectContent>
+                      </SelectTrigger>
+                    </Select>
+                  </span>
+                  <span></span>
+                </div>
+              </div>
+              <div className="w-full flex justify-center">
+                <h2 className="text-2xl font-medium">Hello world song</h2>
+              </div>
+              <div className="flex flex-col text-sm w-fit min-w-30 max-w-40">
+                <p>composed by: {scoreMetadata.composedBy}</p>
+                <p>arranged by: {scoreMetadata.arrangedBy}</p>
+              </div>
             </div>
           </div>
           <div className="h-full w-full">

@@ -64,7 +64,7 @@ export type TLetterNoteRelativeOctave = typeof letterNoteRelativeOctave[
 ]
 
 export type TScoreTempoInBPM = typeof tempo[keyof typeof tempo]
-
+export type TScoreTempoName = keyof typeof tempo
 
 // export type TParserError = { position: number, errorMsg: string }
 
