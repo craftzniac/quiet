@@ -10,8 +10,6 @@ import { ScoreMetadata } from "@/core/dataclasses";
 import type { TBar, TBaseLetterNoteName, TDurationChunkInBeats, TScoreTempoInBPM, TSolfegeEvent, TSolfegeNoteName } from "@/core/types";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { baseLetterNotes, Beat, tempo, type TSolfegeNoteRelativeOctave } from "@/core/constants";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 function createBar(): TBar {
   return { id: generateId(), rawSolfege: "" }
@@ -49,7 +47,7 @@ export function Editor() {
   const [bars, setBars] = useState<Array<TBar>>([createBar()])
   const [scoreMetadata, setScoreMetaData] = useState(new ScoreMetadata())
   const [playerStatus, setPlayerStatus] = useState<"playing" | "paused" | "not_started">("not_started")
-  const [viewMode, setViewMode] = useState<TViewModel>(ViewMode.Edit)
+  const [viewMode] = useState<TViewModel>(ViewMode.Edit)
   const audioCtxRef = useRef<AudioContext | null>(null)
   if (audioCtxRef.current == null) {
     audioCtxRef.current = new AudioContext()
