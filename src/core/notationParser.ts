@@ -1,12 +1,12 @@
-import { type TSolfegeNoteRelativeOctave } from "./constants";
-import type { TChar, TDurationInBeats, TResult, TSolfegeEvent, TSolfegeNote, TSolfegeNoteName, TSolfegeRest } from "./types"
+import { Beat, type TSolfegeNoteRelativeOctave } from "./constants";
+import type { TChar, TDurationChunkInBeats, TResult, TSolfegeEvent, TSolfegeNote, TSolfegeNoteName, TSolfegeRest } from "./types"
 import { TokenizerError } from "./dataclasses";
 import { isSolfegeNoteName, toChar, todo } from "./utils"
 import { ParserError } from "./dataclasses";
 
 // START -------------------------------------- TOKEN TYPES ----------------------
 
-class Token { }
+export class Token { }
 
 /**
  *   @param {TSolfegeNoteName} // "d" | "r" | "m" | "f" | "s" |"l"
@@ -331,12 +331,6 @@ export class Tokenizer {
 
 // START ----------------------------- PARSER --------------------------------------
 
-const beat = {
-  OneThird: 0.333,
-  Half: 0.5,
-  Full: 1
-}
-
 /**
  * @throws {Error}
  * */
@@ -375,11 +369,11 @@ export class Bar {
 }
 
 function createSolfegeNoteEvent(solfege: TSolfegeNoteName): TSolfegeNote {
-  return { type: "note", solfege, durationInBeats: 0, relativeOctave: toSolfegeNoteRelativeOctave(0) }
+  return { type: "note", solfege, durationChunksInBeats: [], relativeOctave: toSolfegeNoteRelativeOctave(0) }
 }
 
 function createSolfegeRestEvent(): TSolfegeRest {
-  return { type: "rest", durationInBeats: 0 }
+  return { type: "rest", durationChunksInBeats: [] }
 }
 
 
@@ -439,7 +433,6 @@ export class Parser {
     return this.punctuationQueue.shift() ?? null
   }
 
-
   parse(): TResult<Array<Bar>, ParserError> {
     while (this.cursor < this.inputTokens.length) {
       this.getNextBar()
@@ -474,7 +467,7 @@ export class Parser {
             if (prevPunc) {
               const duration = this.getDurationBetween(prevPunc, token)
               if (this.currEventBuffer) {
-                this.currEventBuffer.durationInBeats += duration
+                this.currEventBuffer.durationChunksInBeats.push(duration)
               } else {
                 return this.resultError(`Expected a note token but got a ${token.type} token instead`)
               }
@@ -487,7 +480,7 @@ export class Parser {
             if (prevPunc) {
               const duration = this.getDurationBetween(prevPunc, token)
               if (this.currEventBuffer) {
-                this.currEventBuffer.durationInBeats += duration
+                this.currEventBuffer.durationChunksInBeats.push(duration)
               } else {
                 return this.resultError(`Expected a note token but got a ${token.type} token instead`)
               }
@@ -499,7 +492,7 @@ export class Parser {
             if (prevPunc) {
               const duration = this.getDurationBetween(prevPunc, token)
               if (this.currEventBuffer) {
-                this.currEventBuffer.durationInBeats += duration
+                this.currEventBuffer.durationChunksInBeats.push(duration)
                 this.flushBarBuffer()
                 this.reconsume()
                 this.switchState(ParserState.Data)
@@ -582,17 +575,17 @@ export class Parser {
    *      dot                   ---   (col | barl)  0.5
    *
    * */
-  private getDurationBetween(prev: TPunctuation, curr: TPunctuation): TDurationInBeats {
+  private getDurationBetween(prev: TPunctuation, curr: TPunctuation): TDurationChunkInBeats {
     if ((prev.type == "column" || prev.type == "barline") && (curr.type == "column" || curr.type == "barline")) {
-      return beat.Full
+      return Beat.Full
     } else if (prev.type == "dot" && curr.type == "dot") {
-      return beat.OneThird
+      return Beat.OneThird
     } else if ((prev.type == "column" || prev.type == "barline") && curr.type == "dot") {
-      return beat.Half
+      return Beat.Half
     } else if (prev.type == "dot" && (curr.type == "column" || curr.type == "barline")) {
-      return beat.Half
+      return Beat.Half
     } else {
-      throw new Error("Durations not recognized")
+      throw new Error("Duration not recognized")
     }
   }
 

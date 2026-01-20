@@ -2,7 +2,7 @@ import type { ParserError } from "./dataclasses";
 import { Parser, Tokenizer, type Bar } from "./notationParser";
 import type { TResult, TSolfegeEvent } from "./types";
 
-class BarsValidationErr {
+export class BarsValidationErr {
   bars: number[]
   errorMsg: string
   constructor(bars: number[], errorMsg: string) {
@@ -10,6 +10,8 @@ class BarsValidationErr {
     this.errorMsg = errorMsg
   }
 }
+
+const pipe = "|"
 
 function validateEmptyOrInvalidPipeInBars(bars: string[]): TResult<string, BarsValidationErr> {
   const emptyBarIndexes = []
@@ -37,7 +39,6 @@ function validateEmptyOrInvalidPipeInBars(bars: string[]): TResult<string, BarsV
     return { ok: false, error: { bars: barsWithPipes, errorMsg: `Remove the pipes in Bars ${barsWithPipes.map(b => b + 1).join(", ")}` } }
   }
 
-  const pipe = "|"
   // combine bars with "|" as delimeter
   const aggregateBarAsArray = Array.from(bars.join(pipe))
   // append pipe to both end and start of the array
@@ -65,12 +66,12 @@ function validateBeatsPerBar(bars: Bar[], beatsPerBar: number): TResult<void, Ba
   const offendingBars = []
   for (let i = 0; i < bars.length; i++) {
     const bar = bars[i]
-    let durationInBeats = 0
+    let numOfBeatsInBar = 0
     for (const event of bar.events) {
-      durationInBeats += event.durationInBeats
+      numOfBeatsInBar += event.durationChunksInBeats.reduce((acc, val) => Number((acc + val).toFixed(2)), 0)
     }
 
-    if (durationInBeats !== beatsPerBar) {
+    if (numOfBeatsInBar !== beatsPerBar) {
       offendingBars.push(i)
     }
   }

@@ -1,4 +1,4 @@
-import { type pianoNoteFrequency, type baseLetterNotes, tempo, letterNoteRelativeOctave, baseScaleGenMove, baseSolfegeNotes, type TSolfegeNoteRelativeOctave } from "./constants";
+import { type pianoNoteFrequency, type baseLetterNotes, tempo, letterNoteRelativeOctave, baseScaleGenMove, baseSolfegeNotes, type TSolfegeNoteRelativeOctave, Beat } from "./constants";
 
 export type TResult<V, E = Error> = { ok: true, value: V } | { ok: false, error: E }
 
@@ -18,12 +18,12 @@ export type TSolfegeNote = {
   type: "note",
   solfege: TSolfegeNoteName,
   relativeOctave: TSolfegeNoteRelativeOctave,
-  durationInBeats: TDurationInBeats
+  durationChunksInBeats: TDurationChunkInBeats[]
 }
 
 export type TSolfegeRest = {
   type: "rest",
-  durationInBeats: TDurationInBeats
+  durationChunksInBeats: TDurationChunkInBeats[]
 }
 
 export type TScoreKeySignature = {
@@ -57,7 +57,8 @@ export type TLetterNoteFrequency = typeof pianoNoteFrequency[keyof typeof pianoN
 export type TLetterNoteName = keyof typeof pianoNoteFrequency;
 
 
-export type TDurationInBeats = number
+// WARN: MIGHT BREAK CODE SOMWHERE ELSE 
+export type TDurationChunkInBeats = typeof Beat[keyof typeof Beat]
 
 export type TLetterNoteRelativeOctave = typeof letterNoteRelativeOctave[
   keyof typeof letterNoteRelativeOctave

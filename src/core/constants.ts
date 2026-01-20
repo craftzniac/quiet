@@ -1,3 +1,10 @@
+export const Beat = {
+  OneThird: 0.333,
+  Half: 0.5,
+  Full: 1
+} as const
+
+
 export const baseScaleGenMove = {  // WARN: Must contain only non-zero positive integers
   ONE: 1,
   TWO: 2,

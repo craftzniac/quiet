@@ -1,4 +1,4 @@
-import { bass  as sound } from "../wave-tables/bass"
+import { bass as sound } from "../wave-tables/bass"
 import {
   baseLetterNotes,
   baseSolfegeNotes, voiceOctave,
@@ -14,10 +14,8 @@ import type {
   TScoreKeySignature, TScoreTempoInBPM,
   TBaseLetterNotePosition,
   TSoundWave, TLetterNoteRelativeOctave,
-  TDurationInBeats, TLetterNoteFrequency,
-  TSolfegeEvent,
-  TAudioEvent,
-  TSolfegeNoteName,
+  TLetterNoteFrequency, TSolfegeEvent,
+  TAudioEvent, TSolfegeNoteName, TDurationChunkInBeats,
 } from "./types"
 import { baseSolfegeNotesLength, getSolfegeNoteIndexFromName, getSolfegeNoteNameFromIndex } from "./utils"
 
@@ -39,14 +37,14 @@ function solfegeToAudioNotes(keySignature: TScoreKeySignature, scoreTempo: TScor
 
       note = {
         type: "note",
-        durationInSec: durationInBeatsToDurationInSecs(solfegeNote.durationInBeats, scoreTempo),
+        durationInSec: durationChunksInBeatsToDurationInSecs(solfegeNote.durationChunksInBeats, scoreTempo),
         frequency: getLetterNoteFrequency(letterNoteName),
       }
 
     } else {
       note = {
         type: "rest",
-        durationInSec: durationInBeatsToDurationInSecs(solfegeNote.durationInBeats, scoreTempo)
+        durationInSec: durationChunksInBeatsToDurationInSecs(solfegeNote.durationChunksInBeats, scoreTempo)
       }
     }
 
@@ -255,7 +253,8 @@ function toBaseLetterNoteIndex(val: number): TBaseLetterNoteIndex {
 }
 
 
-function durationInBeatsToDurationInSecs(durationInBeats: TDurationInBeats, scoreTempo: TScoreTempoInBPM): number {
+function durationChunksInBeatsToDurationInSecs(durationChunks: TDurationChunkInBeats[], scoreTempo: TScoreTempoInBPM): number {
+  const durationInBeats = durationChunks.reduce((acc, val) => Number((acc + val).toFixed(2)), 0)
   return (durationInBeats * 60) / scoreTempo
 }
 

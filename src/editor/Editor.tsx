@@ -1,24 +1,55 @@
 import { MinusIcon, PauseIcon, PlusIcon } from "lucide-react"
 import { Button } from "@/components/ui/button";
-import { useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState, type ChangeEvent, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { PlayIcon } from "lucide-react"
 import { generateId, getTempoNameFromValue, isBeatsPerBar, isTempoValue, toIntOrNull } from "@/core/utils";
 import { Input } from "@/components/ui/input";
 import { produceValidSolfegeEventsFromRawText } from "@/core/parseToSolfege";
 import { scheduleAndPlay } from "@/core/solfegeToAudio";
 import { ScoreMetadata } from "@/core/dataclasses";
-import type { TBar, TBaseLetterNoteName, TScoreTempoInBPM } from "@/core/types";
+import type { TBar, TBaseLetterNoteName, TDurationChunkInBeats, TScoreTempoInBPM, TSolfegeEvent, TSolfegeNoteName } from "@/core/types";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { baseLetterNotes, tempo } from "@/core/constants";
+import { baseLetterNotes, Beat, tempo, type TSolfegeNoteRelativeOctave } from "@/core/constants";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 function createBar(): TBar {
   return { id: generateId(), rawSolfege: "" }
 }
 
+const ViewMode = {
+  Edit: "edit",
+  Preview: "preview",
+} as const
+
+type TViewModel = typeof ViewMode[keyof typeof ViewMode]
+
+
+function updateBar(id: string, solfege: string, setBars: Dispatch<SetStateAction<Array<TBar>>>) {
+  setBars(prev => {
+    const bar = prev.find(b => b.id == id)
+    if (!bar) {
+      return prev
+    }
+    return prev.map(b => {
+      if (b.id == id) {
+        return { ...b, rawSolfege: solfege }
+      }
+      return b
+    })
+  })
+}
+
+function addBar(setBars: Dispatch<SetStateAction<Array<TBar>>>) {
+  setBars(prev => [...prev, createBar()])
+}
+
+
 export function Editor() {
-  const [scoreMetadata, setScoreMetaData] = useState(new ScoreMetadata())
   const [bars, setBars] = useState<Array<TBar>>([createBar()])
+  const [scoreMetadata, setScoreMetaData] = useState(new ScoreMetadata())
   const [playerStatus, setPlayerStatus] = useState<"playing" | "paused" | "not_started">("not_started")
+  const [viewMode, setViewMode] = useState<TViewModel>(ViewMode.Edit)
   const audioCtxRef = useRef<AudioContext | null>(null)
   if (audioCtxRef.current == null) {
     audioCtxRef.current = new AudioContext()
@@ -43,32 +74,17 @@ export function Editor() {
     }
   }
 
-  function addBar() {
-    setBars(prev => [...prev, createBar()])
-  }
-
-  function deleteBar(id: string) {
+  const deleteBar = useCallback((id: string) => {
     setBars(prev => {
       return prev.filter(bar => bar.id !== id)
     })
-  }
+  }, [])
 
-  function updateBar(id: string, solfege: string) {
-    setBars(prev => {
-      const bar = prev.find(b => b.id == id)
-      if (!bar) {
-        return prev
-      }
-      return prev.map(b => {
-        if (b.id == id) {
-          return { ...b, rawSolfege: solfege }
-        }
-        return b
-      })
-    })
-  }
+  const handleUpdateBar = useCallback((id: string, s: string) => {
+    updateBar(id, s, setBars)
+  }, [])
 
-  async function playOrPause(): Promise<void> {
+  const playOrPause = useCallback(async () => {
     switch (playerStatus) {
       case "not_started": {
         const res = produceValidSolfegeEventsFromRawText(bars.map(b => b.rawSolfege), scoreMetadata.timeSignature.beatsPerBar)
@@ -94,14 +110,23 @@ export function Editor() {
         break;
       }
     }
+  }, [playerStatus, bars, scoreMetadata])
 
-  }
+  // const handleCheckedChange = useCallback((e: boolean) => {
+  //   if (e) { setViewMode("preview") } else { setViewMode("edit") }
+  // }, [])
 
   return (
     <div className="w-full h-full flex flex-col">
       <header className="w-full bg-white p-3 flex">
         <h1>Quiet</h1>
         <div className="w-full flex justify-end">
+          {/* WARN: I AM YET TO FIGURE OUT HOW TO PROPERLY IMPLEMENT PREVIEW FEATURE*/}
+
+          {/* <div className="flex items-center gap-1"> */}
+          {/*   <Switch id="editor-toggle-bar-preview" onCheckedChange={handleCheckedChange} /> */}
+          {/*   <Label htmlFor="editor-toggle-bar-preview" className="text-sm font-normal">preview</Label> */}
+          {/* </div> */}
           <Button variant="ghost" onClick={playOrPause} >
             {
               playerStatus == "playing" ? (
@@ -149,7 +174,7 @@ export function Editor() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectGroup>
-                          {baseLetterNotes.map(n => <SelectItem value={n}>{n}</SelectItem>)}
+                          {baseLetterNotes.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                         </SelectGroup>
                       </SelectContent>
                     </Select>
@@ -193,13 +218,11 @@ export function Editor() {
             <ul className="grid grid-cols-4 grid-rows-12 h-full w-full">
               {
                 bars.map((bar, index) => (
-                  <li className="flex" key={bar.id}>
-                    <BarView bar={bar} index={index} deleteBar={() => deleteBar(bar.id)} disabled={false} updateSolfege={(s) => updateBar(bar.id, s)} />
-                  </li>
+                  <BarView key={bar.id} beatsPerBar={scoreMetadata.timeSignature.beatsPerBar} viewMode={viewMode} bar={bar} displayIndex={index + 1} deleteB={deleteBar} disabled={false} updateSolfege={handleUpdateBar} />
                 ))
               }
               <li className="w-full h-full flex items-center ustify-center">
-                <Button className="w-full h-full rounded-none" variant="ghost" onClick={() => addBar()}>
+                <Button className="w-full h-full rounded-none" variant="ghost" onClick={() => addBar(setBars)}>
                   <PlusIcon className="text-2xl" />
                 </Button>
               </li>
@@ -211,18 +234,180 @@ export function Editor() {
   )
 }
 
-function BarView({ bar, index, deleteBar, disabled, updateSolfege }: { bar: TBar, index: number, deleteBar: () => void, disabled: boolean, updateSolfege: (update: string) => void }) {
+
+type TBarView = {
+  bar: TBar,
+  displayIndex: number,
+  deleteB: (id: string) => void,
+  disabled: boolean,
+  updateSolfege: (id: string, update: string) => void,
+  viewMode: TViewModel,
+  beatsPerBar: number
+}
+
+
+const BarView = memo(function BarView({ viewMode, bar, displayIndex, deleteB, disabled, updateSolfege, beatsPerBar }: TBarView) {
+  const handleClick = useCallback(() => {
+    deleteB(bar.id)
+  }, [bar.id, deleteB])
+
+  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    updateSolfege(bar.id, e.target.value)
+  }, [updateSolfege, bar.id])
+
   return (
     <div className="border w-full p-1 group flex flex-col">
       <div className="flex w-full justify-between">
-        <span className="text-xs">{index + 1}</span>
-        <Button variant="ghost" className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" size="icon-sm" onClick={deleteBar} disabled={disabled}>
+        <span className="text-xs">{displayIndex}</span>
+        <Button tabIndex={-1} variant="ghost" className="opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" size="icon-sm" onClick={handleClick} disabled={disabled}>
           <MinusIcon size={10} />
         </Button>
       </div>
       <div className="w-full h-full flex items-center">
-        <Input className="h-full flex md:text-2xl" value={bar.rawSolfege} onChange={(e) => updateSolfege(e.target.value)} />
+        {
+          viewMode === ViewMode.Edit ? (
+            <Input className="h-full flex md:text-2xl" value={bar.rawSolfege} onChange={handleChange} />
+          ) : (
+            <RenderedSolfege rawSolfege={bar.rawSolfege} beatsPerBar={beatsPerBar} />
+          )
+        }
       </div>
     </div>
+  )
+})
+
+
+type TPunctuation = "|" | "." | ":"
+
+
+// WARN: THIS IS PART OF THE PREVIEW FEATURE AND IT'S NOT REALLY FUNCTIONAL RN
+function RenderedSolfege({ rawSolfege, beatsPerBar }: { rawSolfege: string, beatsPerBar: number }) {
+  const parseRes = useMemo(() => produceValidSolfegeEventsFromRawText([rawSolfege], beatsPerBar), [rawSolfege, beatsPerBar])
+
+  const pieces = useMemo(() => {
+    if (parseRes.ok == false) return []
+    const events = parseRes.value
+    const els: ReactNode[] = []
+    let prevPunctuation: null | TPunctuation = null
+    let state: "event" | "duration_chunk" = "event"
+    let cursor = 0
+    let beatInChunks: TDurationChunkInBeats[] | null = null
+
+    function nextEvent(events: TSolfegeEvent[]): TSolfegeEvent | null {
+      let nextEv: null | TSolfegeEvent = null
+      if (cursor < events.length) {
+        nextEv = events[cursor]
+        cursor++
+      }
+      return nextEv
+    }
+
+    while (cursor < events.length) {
+      switch (state) {
+        case "event": {
+          const ev = nextEvent(events)
+          if (ev == null) break
+          if (ev.type == "note") {
+            prevPunctuation = "|"
+            els.push(<RNote name={ev.solfege} relativeOctave={ev.relativeOctave} />)
+            beatInChunks = ev.durationChunksInBeats
+            state = "duration_chunk"
+          } else {
+            els.push(<RRest />)
+          }
+          break;
+        }
+        case "duration_chunk": {
+          if (beatInChunks == null) { state = "event"; continue };
+          for (let i = 0; i < beatInChunks.length; i++) {
+            const isLast = i === beatInChunks.length - 1
+            const beat = beatInChunks[i]
+            if (prevPunctuation == "|" && beat === Beat.Full) {
+              if (!isLast) {
+                prevPunctuation = ":"
+                els.push(<RColumn />)
+              } else {
+                prevPunctuation = "|"
+                break;
+              }
+            } else if (prevPunctuation === "|" && beat === Beat.Half) {
+              prevPunctuation = "."
+              els.push(<RDot />)
+            } else if (prevPunctuation === "|" && beat === Beat.OneThird) {
+              prevPunctuation = "."
+              els.push(<RDot />)
+            } else if (prevPunctuation === "." && beat === Beat.Full) {
+              // ignore. this is an illgal case
+            } else if (prevPunctuation === "." && beat === Beat.Half) {
+              if (!isLast) {
+                prevPunctuation = ":"
+                els.push(<RColumn />)
+              } else {
+                prevPunctuation = "|"
+                break;
+              }
+            } else if (prevPunctuation === "." && beat === Beat.OneThird) {
+              prevPunctuation = "."
+              els.push(<RDot />)
+            } else if (prevPunctuation == ":" && beat === Beat.Full) {
+              if (!isLast) {
+                prevPunctuation = ":"
+                els.push(<RColumn />)
+              } else {
+                prevPunctuation = "|"
+                break;
+              }
+            } else if (prevPunctuation === ":" && beat === Beat.Half) {
+              prevPunctuation = "."
+              els.push(<RDot />)
+            } else if (prevPunctuation === ":" && beat === Beat.OneThird) {
+              prevPunctuation = "."
+              els.push(<RDot />)
+            }
+          }
+          state = "event"
+          break;
+        }
+      }
+
+    }
+    return els
+  }, [parseRes])
+
+  if (parseRes.ok == false) {
+    return (
+      <div className="flex items-center w-full h-full md:text-2xl px-2 justify-center">
+        <p className="text-destructive italic text-sm w-full text-center">error</p>
+      </div>
+    )
+  }
+  return (
+    <div className="flex items-center w-full h-full md:text-2xl px-2 justify-start gap-2">
+      {pieces}
+    </div>
+  )
+}
+
+function RNote({ name, relativeOctave }: { name: TSolfegeNoteName, relativeOctave: TSolfegeNoteRelativeOctave }) {
+  if (relativeOctave > 0) {
+    return <p className="md:text-2xl">{name}<sup>{relativeOctave}</sup> </p>
+  } else if (relativeOctave < 0) {
+    return <p className="md:text-2xl">{name}<sub>{Math.abs(relativeOctave)}</sub> </p>
+  } else {
+    return <p className="md:text-2xl">{name}</p>
+  }
+}
+
+function RDot() {
+  return <span className="md:text-2xl">.</span>
+}
+
+function RColumn() {
+  return <span className="md:text-2xl">:</span>
+}
+
+function RRest() {
+  return (
+    <span className="w-2 md:text-2xl"></span>
   )
 }
