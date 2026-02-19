@@ -8,13 +8,13 @@ export class ScoreMetadata {
   composedBy: string
   arrangedBy: string
   tempo: TScoreTempoInBPM
-  constructor() {
+  constructor(beatsPerBar: 3 | 4 = 4, scoreTempo: TScoreTempoInBPM = tempo.Allegro) {
     this.title = ""
     this.keySignature = { mode: "major", tonic: "F" }
-    this.timeSignature = { beatsPerBar: 3 }
+    this.timeSignature = { beatsPerBar }
     this.composedBy = ""
     this.arrangedBy = ""
-    this.tempo = tempo.Andante
+    this.tempo = scoreTempo
   }
 }
 

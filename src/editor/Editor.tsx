@@ -11,8 +11,8 @@ import type { TBar, TBaseLetterNoteName, TDurationChunkInBeats, TScoreTempoInBPM
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { baseLetterNotes, Beat, tempo, type TSolfegeNoteRelativeOctave } from "@/core/constants";
 
-function createBar(): TBar {
-  return { id: generateId(), rawSolfege: "" }
+function createBar(rawSolfege: string = ""): TBar {
+  return { id: generateId(), rawSolfege }
 }
 
 const ViewMode = {
@@ -42,9 +42,28 @@ function addBar(setBars: Dispatch<SetStateAction<Array<TBar>>>) {
   setBars(prev => [...prev, createBar()])
 }
 
+const initialBars = [
+  createBar("d.r: m: s: s"),
+  createBar("l: s: m: d"),
+  createBar("r: m: m: r"),
+  createBar("de: r: -: -"),
+  createBar("d.r: m: s: s"),
+  createBar("l: s: m: d"),
+  createBar("r: m: m: r"),
+  createBar("r: d: -: -"),
+  createBar("f: -: f: -"),
+  createBar("l: l: -: l"),
+  createBar("s: s: f: m"),
+  createBar("r: -: -: d.r"),
+  createBar("m: s: s: -.l"),
+  createBar("s: m: d: r"),
+  createBar("m: m: r: r"),
+  createBar("d: -: -: x"),
+]
+
 
 export function Editor() {
-  const [bars, setBars] = useState<Array<TBar>>([createBar()])
+  const [bars, setBars] = useState<Array<TBar>>(initialBars)
   const [scoreMetadata, setScoreMetaData] = useState(new ScoreMetadata())
   const [playerStatus, setPlayerStatus] = useState<"playing" | "paused" | "not_started">("not_started")
   const [viewMode] = useState<TViewModel>(ViewMode.Edit)
